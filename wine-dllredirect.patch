@@ -1,0 +1,671 @@
+diff -purN a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
+--- a/dlls/ntdll/loader.c	2019-09-12 19:50:09.786372471 +0300
++++ b/dlls/ntdll/loader.c	2019-09-12 21:49:27.555143682 +0300
+@@ -113,6 +113,7 @@ struct builtin_load_info
+ {
+     const WCHAR          *load_path;
+     const UNICODE_STRING *filename;
++    const WCHAR          *fakemodule;
+     NTSTATUS              status;
+     WINE_MODREF          *wm;
+ };
+@@ -137,7 +138,8 @@ static WINE_MODREF *cached_modref;
+ static WINE_MODREF *current_modref;
+ static WINE_MODREF *last_failed_modref;
+ 
+-static NTSTATUS load_dll( LPCWSTR load_path, LPCWSTR libname, DWORD flags, WINE_MODREF** pwm );
++static NTSTATUS load_dll( LPCWSTR load_path, LPCWSTR libname, LPCWSTR fakemodule,
++                          DWORD flags, WINE_MODREF** pwm );
+ static NTSTATUS process_attach( WINE_MODREF *wm, LPVOID lpReserved );
+ static FARPROC find_ordinal_export( HMODULE module, const IMAGE_EXPORT_DIRECTORY *exports,
+                                     DWORD exp_size, DWORD ordinal, LPCWSTR load_path );
+@@ -591,7 +593,7 @@ static FARPROC find_forwarded_export( HM
+     if (!(wm = find_basename_module( mod_name )))
+     {
+         TRACE( "delay loading %s for '%s'\n", debugstr_w(mod_name), forward );
+-        if (load_dll( load_path, mod_name, 0, &wm ) == STATUS_SUCCESS &&
++        if (load_dll( load_path, mod_name, NULL, 0, &wm ) == STATUS_SUCCESS &&
+             !(wm->ldr.Flags & LDR_DONT_RESOLVE_REFS))
+         {
+             if (!imports_fixup_done && current_modref)
+@@ -762,7 +764,7 @@ static BOOL import_dll( HMODULE module,
+     {
+         ascii_to_unicode( buffer, name, len );
+         buffer[len] = 0;
+-        status = load_dll( load_path, buffer, 0, &wmImp );
++        status = load_dll( load_path, buffer, NULL, 0, &wmImp );
+     }
+     else  /* need to allocate a larger buffer */
+     {
+@@ -770,7 +772,7 @@ static BOOL import_dll( HMODULE module,
+         if (!ptr) return FALSE;
+         ascii_to_unicode( ptr, name, len );
+         ptr[len] = 0;
+-        status = load_dll( load_path, ptr, 0, &wmImp );
++        status = load_dll( load_path, ptr, NULL, 0, &wmImp );
+         RtlFreeHeap( GetProcessHeap(), 0, ptr );
+     }
+ 
+@@ -1057,7 +1059,7 @@ static NTSTATUS fixup_imports_ilonly( WI
+ 
+     prev = current_modref;
+     current_modref = wm;
+-    if (!(status = load_dll( load_path, mscoreeW, 0, &imp ))) wm->deps[0] = imp;
++    if (!(status = load_dll( load_path, mscoreeW, NULL, 0, &imp ))) wm->deps[0] = imp;
+     current_modref = prev;
+     if (status)
+     {
+@@ -1145,7 +1147,7 @@ static NTSTATUS fixup_imports( WINE_MODR
+  * Allocate a WINE_MODREF structure and add it to the process list
+  * The loader_section must be locked while calling this function.
+  */
+-static WINE_MODREF *alloc_module( HMODULE hModule, const UNICODE_STRING *nt_name, BOOL builtin )
++static WINE_MODREF *alloc_module( HMODULE hModule, const UNICODE_STRING *nt_name, LPCWSTR fakemodule, BOOL builtin )
+ {
+     WINE_MODREF *wm;
+     const WCHAR *p;
+@@ -1159,7 +1161,7 @@ static WINE_MODREF *alloc_module( HMODUL
+     wm->ldr.TlsIndex      = -1;
+     wm->ldr.LoadCount     = 1;
+ 
+-    RtlCreateUnicodeString( &wm->ldr.FullDllName, nt_name->Buffer + 4 /* \??\ prefix */ );
++    RtlCreateUnicodeString( &wm->ldr.FullDllName, fakemodule ? fakemodule : (nt_name->Buffer + 4) /* \??\ prefix */ );
+     if ((p = strrchrW( wm->ldr.FullDllName.Buffer, '\\' ))) p++;
+     else p = wm->ldr.FullDllName.Buffer;
+     RtlInitUnicodeString( &wm->ldr.BaseDllName, p );
+@@ -1898,7 +1900,7 @@ static void load_builtin_callback( void
+         return;
+     }
+ 
+-    wm = alloc_module( module, &nt_name, TRUE );
++    wm = alloc_module( module, &nt_name, builtin_load_info->fakemodule, TRUE );
+     RtlFreeUnicodeString( &nt_name );
+     if (!wm)
+     {
+@@ -2367,9 +2369,9 @@ static NTSTATUS open_dll_file( UNICODE_S
+ /******************************************************************************
+  *	load_native_dll  (internal)
+  */
+-static NTSTATUS load_native_dll( LPCWSTR load_path, const UNICODE_STRING *nt_name, void **module,
+-                                 const pe_image_info_t *image_info, DWORD flags, WINE_MODREF** pwm,
+-                                 struct stat *st )
++static NTSTATUS load_native_dll( LPCWSTR load_path, const UNICODE_STRING *nt_name, LPCWSTR fakemodule,
++                                 void **module, const pe_image_info_t *image_info, DWORD flags,
++                                 WINE_MODREF** pwm, struct stat *st )
+ {
+     IMAGE_NT_HEADERS *nt = RtlImageNtHeader( *module );
+     WINE_MODREF *wm;
+@@ -2384,7 +2386,7 @@ static NTSTATUS load_native_dll( LPCWSTR
+ 
+     /* create the MODREF */
+ 
+-    if (!(wm = alloc_module( *module, nt_name, (image_info->image_flags & IMAGE_FLAGS_WineBuiltin) )))
++    if (!(wm = alloc_module( *module, nt_name, fakemodule, (image_info->image_flags & IMAGE_FLAGS_WineBuiltin) )))
+         return STATUS_NO_MEMORY;
+ 
+     wm->dev = st->st_dev;
+@@ -2621,7 +2623,8 @@ done:
+  *           load_so_dll
+  */
+ static NTSTATUS load_so_dll( LPCWSTR load_path, const UNICODE_STRING *nt_name,
+-                             const char *so_name, WINE_MODREF** pwm )
++                             LPCWSTR fakemodule, const char *so_name,
++                             WINE_MODREF** pwm )
+ {
+     char error[256];
+     void *handle;
+@@ -2642,6 +2645,7 @@ static NTSTATUS load_so_dll( LPCWSTR loa
+ 
+     info.load_path = load_path;
+     info.filename  = so_name ? NULL : nt_name;
++    info.fakemodule= fakemodule;
+     info.status    = STATUS_SUCCESS;
+     info.wm        = NULL;
+ 
+@@ -2699,8 +2703,8 @@ failed:
+ /***********************************************************************
+  *           load_builtin_dll
+  */
+-static NTSTATUS load_builtin_dll( LPCWSTR load_path, const UNICODE_STRING *nt_name, void **module_ptr,
+-                                  DWORD flags, WINE_MODREF** pwm )
++static NTSTATUS load_builtin_dll( LPCWSTR load_path, const UNICODE_STRING *nt_name, LPCWSTR fakemodule,
++                                  void **module_ptr, DWORD flags, WINE_MODREF** pwm )
+ {
+     const WCHAR *name, *p;
+     NTSTATUS status;
+@@ -2723,7 +2727,7 @@ static NTSTATUS load_builtin_dll( LPCWST
+     {
+         /* builtin not found, load the module we got previously */
+         TRACE( "loading %s from PE file %s\n", debugstr_w(name), debugstr_us(nt_name) );
+-        return load_native_dll( load_path, nt_name, module_ptr, &image_info, flags, pwm, &st );
++        return load_native_dll( load_path, nt_name, fakemodule, module_ptr, &image_info, flags, pwm, &st );
+     }
+     if (status) return status;
+ 
+@@ -2739,10 +2743,10 @@ static NTSTATUS load_builtin_dll( LPCWST
+     if (*module_ptr)
+     {
+         TRACE( "loading %s from PE builtin %s\n", debugstr_w(name), debugstr_us(nt_name) );
+-        return load_native_dll( load_path, nt_name, module_ptr, &image_info, flags, pwm, &st );
++        return load_native_dll( load_path, nt_name, fakemodule, module_ptr, &image_info, flags, pwm, &st );
+     }
+ 
+-    return load_so_dll( load_path, nt_name, so_name, pwm );
++    return load_so_dll( load_path, nt_name, fakemodule, so_name, pwm );
+ }
+ 
+ 
+@@ -2959,7 +2963,8 @@ done:
+  * Load a PE style module according to the load order.
+  * The loader_section must be locked while calling this function.
+  */
+-static NTSTATUS load_dll( LPCWSTR load_path, LPCWSTR libname, DWORD flags, WINE_MODREF** pwm )
++static NTSTATUS load_dll( LPCWSTR load_path, LPCWSTR libname, LPCWSTR fakemodule,
++                          DWORD flags, WINE_MODREF** pwm )
+ {
+     enum loadorder loadorder;
+     WINE_MODREF *main_exe;
+@@ -2987,6 +2992,22 @@ static NTSTATUS load_dll( LPCWSTR load_p
+     if (nts && nts != STATUS_DLL_NOT_FOUND && nts != STATUS_INVALID_IMAGE_NOT_MZ) goto done;
+ 
+     main_exe = get_modref( NtCurrentTeb()->Peb->ImageBaseAddress );
++
++    /* handle dll redirection */
++    if (!fakemodule)
++    {
++        BYTE buffer2[sizeof(KEY_VALUE_PARTIAL_INFORMATION) + MAX_PATH * sizeof(WCHAR)];
++        WCHAR *redirect = get_redirect( main_exe ? main_exe->ldr.BaseDllName.Buffer : NULL,
++                                        libname, buffer2, sizeof(buffer2) );
++        if (redirect)
++        {
++            FIXME("Loader redirect from %s to %s\n", debugstr_w(libname), debugstr_w(redirect));
++
++            nts = load_dll( load_path, redirect, libname, flags, pwm );
++            return nts;
++        }
++    }
++
+     loadorder = get_load_order( main_exe ? main_exe->ldr.BaseDllName.Buffer : NULL, &nt_name );
+ 
+     switch (nts)
+@@ -2999,7 +3020,7 @@ static NTSTATUS load_dll( LPCWSTR load_p
+         case LO_BUILTIN:
+         case LO_BUILTIN_NATIVE:
+         case LO_DEFAULT:
+-            if (!load_so_dll( load_path, &nt_name, NULL, pwm )) nts = STATUS_SUCCESS;
++            if (!load_so_dll( load_path, &nt_name, fakemodule, NULL, pwm )) nts = STATUS_SUCCESS;
+             break;
+         default:
+             nts = STATUS_DLL_NOT_FOUND;
+@@ -3016,7 +3037,7 @@ static NTSTATUS load_dll( LPCWSTR load_p
+             case LO_BUILTIN:
+             case LO_BUILTIN_NATIVE:
+             case LO_DEFAULT:
+-                nts = load_builtin_dll( load_path, &nt_name, &module, flags, pwm );
++                nts = load_builtin_dll( load_path, &nt_name, fakemodule, &module, flags, pwm );
+                 break;
+             default:
+                 nts = STATUS_DLL_NOT_FOUND;
+@@ -3031,14 +3052,14 @@ static NTSTATUS load_dll( LPCWSTR load_p
+             {
+             case LO_NATIVE:
+             case LO_NATIVE_BUILTIN:
+-                nts = load_native_dll( load_path, &nt_name, &module, &image_info, flags, pwm, &st );
++                nts = load_native_dll( load_path, &nt_name, fakemodule, &module, &image_info, flags, pwm, &st );
+                 break;
+             case LO_BUILTIN:
+-                nts = load_builtin_dll( load_path, &nt_name, NULL, flags, pwm );
++                nts = load_builtin_dll( load_path, &nt_name, fakemodule, NULL, flags, pwm );
+                 break;
+             case LO_BUILTIN_NATIVE:
+             case LO_DEFAULT:
+-                nts = load_builtin_dll( load_path, &nt_name, NULL, flags, pwm );
++                nts = load_builtin_dll( load_path, &nt_name, fakemodule, NULL, flags, pwm );
+                 if (nts == STATUS_SUCCESS && loadorder == LO_DEFAULT &&
+                     (MODULE_InitDLL( *pwm, DLL_WINE_PREATTACH, NULL ) != STATUS_SUCCESS))
+                 {
+@@ -3048,7 +3069,7 @@ static NTSTATUS load_dll( LPCWSTR load_p
+                     nts = STATUS_DLL_NOT_FOUND;
+                 }
+                 if (nts == STATUS_DLL_NOT_FOUND)
+-                    nts = load_native_dll( load_path, &nt_name, &module, &image_info, flags, pwm, &st );
++                    nts = load_native_dll( load_path, &nt_name, fakemodule, &module, &image_info, flags, pwm, &st );
+                 break;
+             default:
+                 nts = STATUS_DLL_NOT_FOUND;
+@@ -3068,7 +3089,7 @@ static NTSTATUS load_dll( LPCWSTR load_p
+         case LO_BUILTIN:
+         case LO_BUILTIN_NATIVE:
+         case LO_DEFAULT:
+-            nts = load_builtin_dll( load_path, &nt_name, NULL, flags, pwm );
++            nts = load_builtin_dll( load_path, &nt_name, fakemodule, NULL, flags, pwm );
+             break;
+         default:
+             nts = STATUS_DLL_NOT_FOUND;
+@@ -3099,7 +3120,7 @@ NTSTATUS WINAPI DECLSPEC_HOTPATCH LdrLoa
+     RtlEnterCriticalSection( &loader_section );
+ 
+     if (!path_name) path_name = NtCurrentTeb()->Peb->ProcessParameters->DllPath.Buffer;
+-    nts = load_dll( path_name, libname->Buffer, flags, &wm );
++    nts = load_dll( path_name, libname->Buffer, NULL, flags, &wm );
+ 
+     if (nts == STATUS_SUCCESS && !(wm->ldr.Flags & LDR_DONT_RESOLVE_REFS))
+     {
+@@ -4048,7 +4069,7 @@ void __wine_process_init(void)
+     wine_dll_set_callback( load_builtin_callback );
+ 
+     RtlInitUnicodeString( &nt_name, kernel32W );
+-    if ((status = load_builtin_dll( NULL, &nt_name, NULL, 0, &wm )) != STATUS_SUCCESS)
++    if ((status = load_builtin_dll( NULL, &nt_name, NULL, NULL, 0, &wm )) != STATUS_SUCCESS)
+     {
+         MESSAGE( "wine: could not load kernel32.dll, status %x\n", status );
+         exit(1);
+diff -purN a/dlls/ntdll/loadorder.c b/dlls/ntdll/loadorder.c
+--- a/dlls/ntdll/loadorder.c	2019-08-23 17:57:24.000000000 +0300
++++ b/dlls/ntdll/loadorder.c	2019-09-12 20:10:12.579477723 +0300
+@@ -290,102 +290,165 @@ static inline enum loadorder get_env_loa
+ 
+ 
+ /***************************************************************************
+- *	get_standard_key
++ *	open_user_reg_key
++ *
++ * Return a handle to a registry key under HKCU.
++ */
++static HANDLE open_user_reg_key(const WCHAR *key_name)
++{
++    HANDLE hkey, root;
++    OBJECT_ATTRIBUTES attr;
++    UNICODE_STRING nameW;
++
++    RtlOpenCurrentUser( KEY_ALL_ACCESS, &root );
++    attr.Length = sizeof(attr);
++    attr.RootDirectory = root;
++    attr.ObjectName = &nameW;
++    attr.Attributes = 0;
++    attr.SecurityDescriptor = NULL;
++    attr.SecurityQualityOfService = NULL;
++    RtlInitUnicodeString( &nameW, key_name );
++
++    if (NtOpenKey( &hkey, KEY_WOW64_64KEY | KEY_ALL_ACCESS, &attr )) hkey = 0;
++    NtClose( root );
++
++    return hkey;
++}
++
++
++/***************************************************************************
++ *	open_app_reg_key
++ *
++ * Return a handle to an app-specific registry key.
++ */
++static HANDLE open_app_reg_key( const WCHAR *sub_key, const WCHAR *app_name )
++{
++    static const WCHAR AppDefaultsW[] = {'S','o','f','t','w','a','r','e','\\','W','i','n','e','\\',
++                                         'A','p','p','D','e','f','a','u','l','t','s','\\',0};
++    WCHAR *str;
++    HANDLE hkey;
++
++    str = RtlAllocateHeap( GetProcessHeap(), 0,
++                           sizeof(AppDefaultsW) +
++                           strlenW(sub_key) * sizeof(WCHAR) +
++                           strlenW(app_name) * sizeof(WCHAR) );
++    if (!str) return 0;
++    strcpyW( str, AppDefaultsW );
++    strcatW( str, app_name );
++    strcatW( str, sub_key );
++
++    hkey = open_user_reg_key( str );
++    RtlFreeHeap( GetProcessHeap(), 0, str );
++    return hkey;
++}
++
++
++/***************************************************************************
++ *	get_override_standard_key
+  *
+  * Return a handle to the standard DllOverrides registry section.
+  */
+-static HANDLE get_standard_key(void)
++static HANDLE get_override_standard_key(void)
+ {
+     static const WCHAR DllOverridesW[] = {'S','o','f','t','w','a','r','e','\\','W','i','n','e','\\',
+                                           'D','l','l','O','v','e','r','r','i','d','e','s',0};
+     static HANDLE std_key = (HANDLE)-1;
+ 
+     if (std_key == (HANDLE)-1)
+-    {
+-        OBJECT_ATTRIBUTES attr;
+-        UNICODE_STRING nameW;
+-        HANDLE root;
+-
+-        RtlOpenCurrentUser( KEY_ALL_ACCESS, &root );
+-        attr.Length = sizeof(attr);
+-        attr.RootDirectory = root;
+-        attr.ObjectName = &nameW;
+-        attr.Attributes = 0;
+-        attr.SecurityDescriptor = NULL;
+-        attr.SecurityQualityOfService = NULL;
+-        RtlInitUnicodeString( &nameW, DllOverridesW );
+-
+-        /* @@ Wine registry key: HKCU\Software\Wine\DllOverrides */
+-        if (NtOpenKey( &std_key, KEY_ALL_ACCESS, &attr )) std_key = 0;
+-        NtClose( root );
+-    }
++        std_key = open_user_reg_key( DllOverridesW );
++
+     return std_key;
+ }
+ 
+ 
+ /***************************************************************************
+- *	get_app_key
++ *	get_override_app_key
+  *
+  * Get the registry key for the app-specific DllOverrides list.
+  */
+-static HANDLE get_app_key( const WCHAR *app_name )
++static HANDLE get_override_app_key( const WCHAR *app_name )
+ {
+-    OBJECT_ATTRIBUTES attr;
+-    UNICODE_STRING nameW;
+-    HANDLE root;
+-    WCHAR *str;
+-    static const WCHAR AppDefaultsW[] = {'S','o','f','t','w','a','r','e','\\','W','i','n','e','\\',
+-                                         'A','p','p','D','e','f','a','u','l','t','s','\\',0};
+     static const WCHAR DllOverridesW[] = {'\\','D','l','l','O','v','e','r','r','i','d','e','s',0};
+     static HANDLE app_key = (HANDLE)-1;
+ 
+-    if (app_key != (HANDLE)-1) return app_key;
++    if (app_key == (HANDLE)-1)
++        app_key = open_app_reg_key( DllOverridesW, app_name );
+ 
+-    str = RtlAllocateHeap( GetProcessHeap(), 0,
+-                           sizeof(AppDefaultsW) + sizeof(DllOverridesW) +
+-                           strlenW(app_name) * sizeof(WCHAR) );
+-    if (!str) return 0;
+-    strcpyW( str, AppDefaultsW );
+-    strcatW( str, app_name );
+-    strcatW( str, DllOverridesW );
++    return app_key;
++}
+ 
+-    RtlOpenCurrentUser( KEY_ALL_ACCESS, &root );
+-    attr.Length = sizeof(attr);
+-    attr.RootDirectory = root;
+-    attr.ObjectName = &nameW;
+-    attr.Attributes = 0;
+-    attr.SecurityDescriptor = NULL;
+-    attr.SecurityQualityOfService = NULL;
+-    RtlInitUnicodeString( &nameW, str );
+ 
+-    /* @@ Wine registry key: HKCU\Software\Wine\AppDefaults\app.exe\DllOverrides */
+-    if (NtOpenKey( &app_key, KEY_ALL_ACCESS, &attr )) app_key = 0;
+-    NtClose( root );
+-    RtlFreeHeap( GetProcessHeap(), 0, str );
++/***************************************************************************
++ *	get_redirect_standard_key
++ *
++ * Return a handle to the standard DllRedirects registry section.
++ */
++static HANDLE get_redirect_standard_key(void)
++{
++    static const WCHAR DllRedirectsW[] = {'S','o','f','t','w','a','r','e','\\','W','i','n','e','\\',
++                                          'D','l','l','R','e','d','i','r','e','c','t','s',0};
++    static HANDLE std_key = (HANDLE)-1;
++
++    if (std_key == (HANDLE)-1)
++        std_key = open_user_reg_key( DllRedirectsW );
++
++    return std_key;
++}
++
++
++/***************************************************************************
++ *	get_redirect_app_key
++ *
++ * Get the registry key for the app-specific DllRedirects list.
++ */
++static HANDLE get_redirect_app_key( const WCHAR *app_name )
++{
++    static const WCHAR DllRedirectsW[] = {'\\','D','l','l','R','e','d','i','r','e','c','t','s',0};
++    static HANDLE app_key = (HANDLE)-1;
++
++    if (app_key == (HANDLE)-1)
++        app_key = open_app_reg_key( DllRedirectsW, app_name );
++
+     return app_key;
+ }
+ 
+ 
+ /***************************************************************************
+- *	get_registry_value
++ *	get_registry_string
+  *
+- * Load the registry loadorder value for a given module.
++ * Load a registry string for a given module.
+  */
+-static enum loadorder get_registry_value( HANDLE hkey, const WCHAR *module )
++static WCHAR* get_registry_string( HANDLE hkey, const WCHAR *module, BYTE *buffer,
++                                   ULONG size )
+ {
+     UNICODE_STRING valueW;
+-    char buffer[80];
+     DWORD count;
++    WCHAR *ret = NULL;
+ 
+     RtlInitUnicodeString( &valueW, module );
+-
+-    if (!NtQueryValueKey( hkey, &valueW, KeyValuePartialInformation,
+-                                 buffer, sizeof(buffer), &count ))
++    if (size >= sizeof(WCHAR) &&
++        !NtQueryValueKey( hkey, &valueW, KeyValuePartialInformation,
++                          buffer, size - sizeof(WCHAR), &count ))
+     {
+-        WCHAR *str = (WCHAR *)((KEY_VALUE_PARTIAL_INFORMATION *)buffer)->Data;
+-        return parse_load_order( str );
++        KEY_VALUE_PARTIAL_INFORMATION *info = (void *)buffer;
++        ret = (WCHAR *)info->Data;
++        ret[info->DataLength / sizeof(WCHAR)] = 0;
+     }
+-    return LO_INVALID;
++
++    return ret;
++}
++
++
++/***************************************************************************
++ *	get_registry_load_order
++ *
++ * Load the registry loadorder value for a given module.
++ */
++static enum loadorder get_registry_load_order( HANDLE hkey, const WCHAR *module )
++{
++    BYTE buffer[81];
++    WCHAR *str = get_registry_string( hkey, module, buffer, sizeof(buffer) );
++    return str ? parse_load_order( str ) : LO_INVALID;
+ }
+ 
+ 
+@@ -407,13 +470,13 @@ static enum loadorder get_load_order_val
+         return ret;
+     }
+ 
+-    if (app_key && ((ret = get_registry_value( app_key, module )) != LO_INVALID))
++    if (app_key && ((ret = get_registry_load_order( app_key, module )) != LO_INVALID))
+     {
+         TRACE( "got app defaults %s for %s\n", debugstr_loadorder(ret), debugstr_w(module) );
+         return ret;
+     }
+ 
+-    if (std_key && ((ret = get_registry_value( std_key, module )) != LO_INVALID))
++    if (std_key && ((ret = get_registry_load_order( std_key, module )) != LO_INVALID))
+     {
+         TRACE( "got standard key %s for %s\n", debugstr_loadorder(ret), debugstr_w(module) );
+         return ret;
+@@ -423,28 +486,44 @@ static enum loadorder get_load_order_val
+ }
+ 
+ 
+-/***************************************************************************
+- *	get_load_order   (internal)
++ /***************************************************************************
++ *     get_redirect_value
+  *
+- * Return the loadorder of a module.
+- * The system directory and '.dll' extension is stripped from the path.
++ * Get the redirect value for the exact specified module string, looking in:
++ * 1. The per-application DllRedirects key
++ * 2. The standard DllRedirects key
+  */
+-enum loadorder get_load_order( const WCHAR *app_name, const UNICODE_STRING *nt_name )
++static WCHAR* get_redirect_value( HANDLE std_key, HANDLE app_key, const WCHAR *module,
++                                  BYTE *buffer, ULONG size )
+ {
+-    static const WCHAR nt_prefixW[] = {'\\','?','?','\\',0};
+-    enum loadorder ret = LO_INVALID;
+-    HANDLE std_key, app_key = 0;
+-    const WCHAR *path = nt_name->Buffer;
+-    WCHAR *module, *basename;
+-    int len;
++    WCHAR *ret = NULL;
+ 
+-    if (!init_done) init_load_order();
+-    std_key = get_standard_key();
+-    if (app_name) app_key = get_app_key( app_name );
+-    if (!strncmpW( path, nt_prefixW, 4 )) path += 4;
++    if (app_key && (ret = get_registry_string( app_key, module, buffer, size )))
++    {
++        TRACE( "got app defaults %s for %s\n", debugstr_w(ret), debugstr_w(module) );
++        return ret;
++    }
++
++    if (std_key && (ret = get_registry_string( std_key, module, buffer, size )))
++    {
++        TRACE( "got standard key %s for %s\n", debugstr_w(ret), debugstr_w(module) );
++        return ret;
++    }
++
++    return ret;
++}
+ 
+-    TRACE("looking for %s\n", debugstr_w(path));
+ 
++/***************************************************************************
++ *	get_module_basename   (internal)
++ *
++ * Return the loadorder of a module.
++ * The system directory and '.dll' extension is stripped from the path.
++ */
++static WCHAR* get_module_basename( const WCHAR *path, WCHAR **basename )
++{
++    WCHAR *module;
++    DWORD len;
+     /* Strip path information if the module resides in the system directory
+      */
+     if (!strncmpiW( system_dir, path, strlenW( system_dir )))
+@@ -454,12 +533,39 @@ enum loadorder get_load_order( const WCH
+         if (!strchrW( p, '\\' ) && !strchrW( p, '/' )) path = p;
+     }
+ 
+-    if (!(len = strlenW(path))) return ret;
+-    if (!(module = RtlAllocateHeap( GetProcessHeap(), 0, (len + 2) * sizeof(WCHAR) ))) return ret;
++    if (!(len = strlenW(path))) return NULL;
++    if (!(module = RtlAllocateHeap( GetProcessHeap(), 0, (len + 2) * sizeof(WCHAR) ))) return NULL;
+     strcpyW( module+1, path );  /* reserve module[0] for the wildcard char */
+-    basename = (WCHAR *)get_basename( module+1 );
++    *basename = (WCHAR *)get_basename( module+1 );
+ 
+     if (len >= 4) remove_dll_ext( module + 1 + len - 4 );
++    return module;
++}
++
++
++/***************************************************************************
++ *	get_load_order   (internal)
++ *
++ * Return the loadorder of a module.
++ * The system directory and '.dll' extension is stripped from the path.
++ */
++enum loadorder get_load_order( const WCHAR *app_name, const UNICODE_STRING *nt_name )
++{
++    static const WCHAR nt_prefixW[] = {'\\','?','?','\\',0};
++    enum loadorder ret = LO_INVALID;
++    HANDLE std_key, app_key = 0;
++    const WCHAR *path = nt_name->Buffer;
++    WCHAR *module, *basename;
++
++    if (!init_done) init_load_order();
++    std_key = get_override_standard_key();
++    if (app_name) app_key = get_override_app_key( app_name );
++    if (!strncmpW( path, nt_prefixW, 4 )) path += 4;
++
++    TRACE("looking up loadorder for %s\n", debugstr_w(path));
++
++    if (!(module = get_module_basename(path, &basename)))
++        return ret;
+ 
+     /* first explicit module name */
+     if ((ret = get_load_order_value( std_key, app_key, module+1 )) != LO_INVALID)
+@@ -488,5 +594,50 @@ enum loadorder get_load_order( const WCH
+ 
+  done:
+     RtlFreeHeap( GetProcessHeap(), 0, module );
++    return ret;
++}
++
++
++/***************************************************************************
++ *  get_redirect   (internal)
++ *
++ * Return the redirect value of a module.
++ * The system directory and '.dll' extension is stripped from the path.
++ */
++WCHAR* get_redirect( const WCHAR *app_name, const WCHAR *path, BYTE *buffer, ULONG size )
++{
++    WCHAR *ret = NULL;
++    HANDLE std_key, app_key = 0;
++    WCHAR *module, *basename;
++
++    std_key = get_redirect_standard_key();
++    if (app_name) app_key = get_redirect_app_key( app_name );
++
++    TRACE("looking up redirection for %s\n", debugstr_w(path));
++
++    if (!(module = get_module_basename(path, &basename)))
++        return ret;
++
++    /* first explicit module name */
++    if ((ret = get_redirect_value( std_key, app_key, module+1, buffer, size )))
++        goto done;
++
++    /* then module basename preceded by '*' */
++    basename[-1] = '*';
++    if ((ret = get_redirect_value( std_key, app_key, basename-1, buffer, size )))
++        goto done;
++
++    /* then module basename without '*' (only if explicit path) */
++    /*
++    if (basename != module+1 && (ret = get_redirect_value( std_key, app_key, basename, buffer, size )))
++        goto done;
++    */
++
++    /* and last the hard-coded default */
++    ret = NULL;
++    TRACE( "no redirection found for %s\n", debugstr_w(path) );
++
++ done:
++    RtlFreeHeap( GetProcessHeap(), 0, module );
+     return ret;
+ }
+diff -purN a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
+--- a/dlls/ntdll/ntdll_misc.h	2019-09-12 19:50:09.786372471 +0300
++++ b/dlls/ntdll/ntdll_misc.h	2019-09-12 20:10:12.579477723 +0300
+@@ -263,6 +263,7 @@ enum loadorder
+ };
+ 
+ extern enum loadorder get_load_order( const WCHAR *app_name, const UNICODE_STRING *nt_name ) DECLSPEC_HIDDEN;
++extern WCHAR* get_redirect( const WCHAR *app_name, const WCHAR *path, BYTE *buffer, ULONG size ) DECLSPEC_HIDDEN;
+ 
+ struct debug_info
+ {

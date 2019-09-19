@@ -1,0 +1,285 @@
+diff -purN a/programs/winecfg/main.c b/programs/winecfg/main.c
+--- a/programs/winecfg/main.c	2019-08-23 17:57:24.000000000 +0300
++++ b/programs/winecfg/main.c	2019-09-12 20:33:24.422543113 +0300
+@@ -58,7 +58,7 @@ PropSheetCallback (HWND hWnd, UINT uMsg,
+     return 0;
+ }
+ 
+-#define NUM_PROPERTY_PAGES 7
++#define NUM_PROPERTY_PAGES 8
+ 
+ static INT_PTR
+ doPropertySheet (HINSTANCE hInstance, HWND hOwner)
+@@ -139,6 +139,16 @@ doPropertySheet (HINSTANCE hInstance, HW
+     psp[pg].lParam = 0;
+     pg++;
+ 
++    psp[pg].dwSize = sizeof (PROPSHEETPAGEW);
++    psp[pg].dwFlags = PSP_USETITLE;
++    psp[pg].hInstance = hInstance;
++    psp[pg].u.pszTemplate = MAKEINTRESOURCEW (IDD_STAGING);
++    psp[pg].u2.pszIcon = NULL;
++    psp[pg].pfnDlgProc = StagingDlgProc;
++    psp[pg].pszTitle =  load_string (IDS_TAB_STAGING);
++    psp[pg].lParam = 0;
++    pg++;
++
+     /*
+      * Fill out the (General) PROPSHEETPAGE data structure 
+      * for the property sheet
+diff -purN a/programs/winecfg/Makefile.in b/programs/winecfg/Makefile.in
+--- a/programs/winecfg/Makefile.in	2019-08-23 17:57:24.000000000 +0300
++++ b/programs/winecfg/Makefile.in	2019-09-12 20:34:18.749199321 +0300
+@@ -11,6 +11,7 @@ C_SRCS = \
+ 	driveui.c \
+ 	libraries.c \
+ 	main.c \
++	staging.c \
+ 	theme.c \
+ 	winecfg.c \
+ 	x11drvdlg.c
+diff -purN a/programs/winecfg/resource.h b/programs/winecfg/resource.h
+--- a/programs/winecfg/resource.h	2019-08-23 17:57:24.000000000 +0300
++++ b/programs/winecfg/resource.h	2019-09-12 20:59:16.969028668 +0300
+@@ -45,6 +45,7 @@
+ #define IDS_SHELL_FOLDER                16
+ #define IDS_LINKS_TO                    17
+ #define IDS_WINECFG_TITLE_APP           18   /* App specific title */
++#define IDS_TAB_STAGING                 19
+ #define IDI_WINECFG                     100
+ #define IDI_LOGO                        102
+ #define IDD_ABOUTCFG                    107
+@@ -54,6 +55,7 @@
+ #define IDD_DLLCFG                      111
+ #define IDD_DRIVECFG                    112
+ #define IDD_DESKTOP_INTEGRATION         115
++#define IDD_STAGING                     116
+ #define IDC_WINVER                      1012
+ #define IDC_DESKTOP_WIDTH               1023
+ #define IDC_DESKTOP_HEIGHT              1024
+@@ -219,3 +221,9 @@
+ #define IDC_ABT_TITLE_TEXT           8436
+ #define IDC_ABT_WEB_LINK             8437
+ #define IDC_ABT_LICENSE_TEXT         8438
++
++/* Staging tab */
++#define IDC_ENABLE_NATIVE_D3D9       9001
++#define IDC_ENABLE_D9VK              9009
++#define IDC_ENABLE_DXVK              9010
++#define IDC_ENABLE_DXGI              9011
+diff -purN a/programs/winecfg/staging.c b/programs/winecfg/staging.c
+--- a/programs/winecfg/staging.c	1970-01-01 03:00:00.000000000 +0300
++++ b/programs/winecfg/staging.c	2019-09-12 22:10:27.795355676 +0300
+@@ -0,0 +1,171 @@
++/*
++ * WineCfg Staging panel
++ *
++ * Copyright 2014 Michael Müller
++ * Copyright 2015 Sebastian Lackner
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ *
++ */
++
++#define COBJMACROS
++
++#include "config.h"
++
++#include <windows.h>
++#include <wine/unicode.h>
++#include <wine/debug.h>
++
++#include "resource.h"
++#include "winecfg.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(winecfg);
++
++/*
++ * Gallium nine
++ */
++static BOOL nine_get(void)
++{
++    BOOL ret;
++    char *value = get_reg_key(config_key, keypath("DllRedirects"), "d3d9", NULL);
++    ret = (value && !strcmp(value, "d3d9-nine.dll"));
++    HeapFree(GetProcessHeap(), 0, value);
++    return ret;
++}
++
++static void nine_set(BOOL status)
++{
++    set_reg_key(config_key, keypath("DllRedirects"), "d3d9", status ? "d3d9-nine.dll" : NULL);
++}
++
++
++/*
++ * D9VK
++ */
++static BOOL d9vk_get(void)
++{
++    BOOL ret;
++    char *value = get_reg_key(config_key, keypath("DllRedirects"), "d3d9", NULL);
++    ret = (value && !strcmp(value, "d3d9-d9vk.dll"));
++    HeapFree(GetProcessHeap(), 0, value);
++    return ret;
++}
++
++static void d9vk_set(BOOL status)
++{
++    set_reg_key(config_key, keypath("DllRedirects"), "d3d9", status ? "d3d9-d9vk.dll" : NULL);
++}
++
++
++/*
++ * DXVK
++ */
++static BOOL dxgi_get(void)
++{
++    BOOL ret;
++    char *value = get_reg_key(config_key, keypath("DllRedirects"), "dxgi", NULL);
++    ret = (value && !strcmp(value, "dxgi-dxvk.dll"));
++    HeapFree(GetProcessHeap(), 0, value);
++    return ret;
++}
++
++static void dxgi_set(BOOL status)
++{
++    set_reg_key(config_key, keypath("DllRedirects"), "dxgi", status ? "dxgi-dxvk.dll" : NULL);
++}
++
++static BOOL dxvk_get(void)
++{
++    BOOL ret;
++    char *value = get_reg_key(config_key, keypath("DllRedirects"), "d3d11", NULL);
++    ret = (value && !strcmp(value, "d3d11-dxvk.dll"));
++    HeapFree(GetProcessHeap(), 0, value);
++    return ret;
++}
++
++static void dxvk_set(BOOL status)
++{
++    set_reg_key(config_key, keypath("DllRedirects"), "d3d10", status ? "d3d10-dxvk.dll" : NULL);
++    set_reg_key(config_key, keypath("DllRedirects"), "d3d10_1", status ? "d3d10_1-dxvk.dll" : NULL);
++    set_reg_key(config_key, keypath("DllRedirects"), "d3d10core", status ? "d3d10core-dxvk.dll" : NULL);
++    set_reg_key(config_key, keypath("DllRedirects"), "d3d11", status ? "d3d11-dxvk.dll" : NULL);
++}
++
++
++static void load_staging_settings(HWND dialog)
++{
++    CheckDlgButton(dialog, IDC_ENABLE_NATIVE_D3D9, nine_get() ? BST_CHECKED : BST_UNCHECKED);
++    CheckDlgButton(dialog, IDC_ENABLE_D9VK, d9vk_get() ? BST_CHECKED : BST_UNCHECKED);
++    CheckDlgButton(dialog, IDC_ENABLE_DXVK, dxvk_get() ? BST_CHECKED : BST_UNCHECKED);
++    CheckDlgButton(dialog, IDC_ENABLE_DXGI, dxgi_get() ? BST_CHECKED : BST_UNCHECKED);
++#if !defined(HAVE_D3D9NINE)
++    disable(IDC_ENABLE_NATIVE_D3D9);
++#endif
++}
++
++INT_PTR CALLBACK StagingDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
++{
++    BOOL bCheck;
++    
++    switch (uMsg)
++    {
++    case WM_INITDIALOG:
++        break;
++
++    case WM_NOTIFY:
++        if (((LPNMHDR)lParam)->code == PSN_SETACTIVE)
++            load_staging_settings(hDlg);
++        break;
++
++    case WM_SHOWWINDOW:
++        set_window_title(hDlg);
++        break;
++
++    case WM_DESTROY:
++        break;
++
++    case WM_COMMAND:
++        if (HIWORD(wParam) != BN_CLICKED) break;
++        switch (LOWORD(wParam))
++        {
++        case IDC_ENABLE_NATIVE_D3D9:
++            bCheck = IsDlgButtonChecked(hDlg, IDC_ENABLE_NATIVE_D3D9) == BST_CHECKED;
++            if (bCheck && d9vk_get()) {
++                CheckDlgButton(hDlg, IDC_ENABLE_D9VK, BST_UNCHECKED);
++            }
++            nine_set(bCheck);
++            SendMessageW(GetParent(hDlg), PSM_CHANGED, 0, 0);
++            return TRUE;
++        case IDC_ENABLE_D9VK:
++            bCheck = IsDlgButtonChecked(hDlg, IDC_ENABLE_D9VK) == BST_CHECKED;
++            if (bCheck && nine_get()) {
++                CheckDlgButton(hDlg, IDC_ENABLE_NATIVE_D3D9, BST_UNCHECKED);
++            }
++            d9vk_set(bCheck);
++            SendMessageW(GetParent(hDlg), PSM_CHANGED, 0, 0);
++            return TRUE;
++        case IDC_ENABLE_DXVK:
++            dxvk_set(IsDlgButtonChecked(hDlg, IDC_ENABLE_DXVK) == BST_CHECKED);
++            SendMessageW(GetParent(hDlg), PSM_CHANGED, 0, 0);
++            return TRUE;
++        case IDC_ENABLE_DXGI:
++            dxgi_set(IsDlgButtonChecked(hDlg, IDC_ENABLE_DXVK) == BST_CHECKED);
++            SendMessageW(GetParent(hDlg), PSM_CHANGED, 0, 0);
++            return TRUE;
++        }
++        break;
++    }
++    return FALSE;
++}
+diff -purN a/programs/winecfg/winecfg.h b/programs/winecfg/winecfg.h
+--- a/programs/winecfg/winecfg.h	2019-08-23 17:57:24.000000000 +0300
++++ b/programs/winecfg/winecfg.h	2019-09-12 20:33:24.422543113 +0300
+@@ -87,6 +87,7 @@ INT_PTR CALLBACK AppDlgProc (HWND hDlg,
+ INT_PTR CALLBACK LibrariesDlgProc (HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
+ INT_PTR CALLBACK AudioDlgProc (HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
+ INT_PTR CALLBACK ThemeDlgProc (HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
++INT_PTR CALLBACK StagingDlgProc (HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
+ INT_PTR CALLBACK AboutDlgProc (HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
+ 
+ /* Drive management  */
+diff -purN a/programs/winecfg/winecfg.rc b/programs/winecfg/winecfg.rc
+--- a/programs/winecfg/winecfg.rc	2019-08-23 17:57:24.000000000 +0300
++++ b/programs/winecfg/winecfg.rc	2019-09-12 20:56:36.737835373 +0300
+@@ -39,6 +39,7 @@ BEGIN
+     IDS_TAB_GRAPHICS        "Graphics"
+     IDS_TAB_DESKTOP_INTEGRATION "Desktop Integration"
+     IDS_TAB_AUDIO           "Audio"
++    IDS_TAB_STAGING         "Staging"
+     IDS_TAB_ABOUT           "About"
+     IDS_WINECFG_TITLE       "Wine configuration"
+     IDS_WINECFG_TITLE_APP   "Wine configuration for %s"
+@@ -312,6 +313,18 @@ BEGIN
+     PUSHBUTTON      "B&rowse...",IDC_BROWSE_SFPATH,195,195,50,13,WS_DISABLED
+ END
+ 
++IDD_STAGING DIALOG  0, 0, 260, 220
++STYLE WS_CHILD | WS_DISABLED
++FONT 8, "MS Shell Dlg"
++BEGIN
++    GROUPBOX    "Staging settings",IDC_STATIC,8,4,244,210
++    LTEXT       "The following settings are experimental and may break stuff!\nMake sure to reset them again in case of a problem.\nGallium Nine requires MESA graphics drivers.\n",IDC_STATIC,16,16,230,24
++    CONTROL     "Enable &Gallium Nine for better D3D9 graphics performance.",IDC_ENABLE_NATIVE_D3D9,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,16,48,230,8
++    CONTROL     "Enable D9&VK for better D3D9 graphics performance.",IDC_ENABLE_D9VK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,16,63,230,8
++    CONTROL     "Enable &DXVK for better D3D10/11 graphics performance.",IDC_ENABLE_DXVK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,16,78,230,8
++    CONTROL     "Enable DXG&I from DXVK package (breaks VKD3D).",IDC_ENABLE_DXGI,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,16,93,230,8
++END
++
+ LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
+ 
+ /* @makedep: winecfg.ico */
