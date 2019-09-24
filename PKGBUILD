@@ -1,3 +1,4 @@
+# Maintainer: Leonid Maksymchuk <leonmaxx@gmail.com>
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 # Contributor: Sven-Hendrik Haase <sh@lutzhaase.com>
 # Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
@@ -6,9 +7,9 @@
 
 pkgname=wine-proton
 pkgver=4.11
-pkgrel=5
+pkgrel=6
 
-_pkgcommit=49dabdcb065161e8d5d3d9b76ca0a514fb0bbc32
+_pkgcommit=08a1b1024f9376309ae6bcbc902aa36478184b6d
 
 _pkgbasever=${pkgver/rc/-rc}
 
@@ -21,7 +22,7 @@ source=("wine-proton-$pkgver-$pkgrel.zip::https://github.com/ValveSoftware/wine/
         proton-disable-menubuilder.patch
         30-win32-aliases.conf
         wine-binfmt.conf)
-sha512sums=('235ad4d84ade3607f64a78fcdec298974e430631ecd4a9fabd9e6a685a5a15b7930ecedd1603c3dd8106cd6e004f852fd83c87c1675a16acc7aedaf809bb3d0a'
+sha512sums=('79d7f22b1987c65f57ab7f39643450da984eeb0a299caebf2997f4100b20c8c5a6317dc25eaacd4a8c2da09c13ee8838a15327b5f9a7aac96f275a064ff85cd7'
             'b6318b7ac2347e68419dd9d59804fb88ec5f9f3f09332101ca92e73f08d12b65637397dc666b6a5218d690e9003df96f3b5e5f31cee89900ebfdabce2998fab8'
             '1dd5a3fa5b23eab176eb73ec5feb128f16a611b9a4b7bcc887096bab07e85890a96f81eba8ff0abd04a645d442a3a3139e0a1f8e317fa4e0d52bf0e793d1c95d'
             '0993b719e582150ced4cf75c2bc21662372cea2be9008bd99f2c8aed25a9b16284834f1bd6f74443c3a22e91e0e2fd08e735ffbc4a0344513c4518f861e0248d'
@@ -137,7 +138,7 @@ prepare() {
   patch -p1 <../wine-d3d9-nine.patch
   patch -R -p1 <../proton-nocrash.patch
   patch -R -p1 <../proton-disable-menubuilder.patch
-  
+
   autoreconf
   tools/make_requests
   popd
