@@ -1,6 +1,6 @@
 diff -purN a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
---- a/dlls/ntdll/loader.c	2019-09-12 19:50:09.786372471 +0300
-+++ b/dlls/ntdll/loader.c	2019-09-12 21:49:27.555143682 +0300
+--- a/dlls/ntdll/loader.c	2019-11-16 17:44:13.518580313 +0200
++++ b/dlls/ntdll/loader.c	2019-11-16 18:01:35.857851117 +0200
 @@ -113,6 +113,7 @@ struct builtin_load_info
  {
      const WCHAR          *load_path;
@@ -117,7 +117,7 @@ diff -purN a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
 @@ -2642,6 +2645,7 @@ static NTSTATUS load_so_dll( LPCWSTR loa
  
      info.load_path = load_path;
-     info.filename  = so_name ? NULL : nt_name;
+     info.filename  = nt_name;
 +    info.fakemodule= fakemodule;
      info.status    = STATUS_SUCCESS;
      info.wm        = NULL;
@@ -150,12 +150,12 @@ diff -purN a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
 +        return load_native_dll( load_path, nt_name, fakemodule, module_ptr, &image_info, flags, pwm, &st );
      }
  
--    return load_so_dll( load_path, nt_name, so_name, pwm );
-+    return load_so_dll( load_path, nt_name, fakemodule, so_name, pwm );
+-    status = load_so_dll( load_path, nt_name, so_name, pwm );
++    status = load_so_dll( load_path, nt_name, fakemodule, so_name, pwm );
+     RtlFreeHeap( GetProcessHeap(), 0, so_name );
+     return status;
  }
- 
- 
-@@ -2959,7 +2963,8 @@ done:
+@@ -2972,7 +2976,8 @@ done:
   * Load a PE style module according to the load order.
   * The loader_section must be locked while calling this function.
   */
@@ -165,7 +165,7 @@ diff -purN a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
  {
      enum loadorder loadorder;
      WINE_MODREF *main_exe;
-@@ -2987,6 +2992,22 @@ static NTSTATUS load_dll( LPCWSTR load_p
+@@ -3000,6 +3005,22 @@ static NTSTATUS load_dll( LPCWSTR load_p
      if (nts && nts != STATUS_DLL_NOT_FOUND && nts != STATUS_INVALID_IMAGE_NOT_MZ) goto done;
  
      main_exe = get_modref( NtCurrentTeb()->Peb->ImageBaseAddress );
@@ -188,7 +188,7 @@ diff -purN a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
      loadorder = get_load_order( main_exe ? main_exe->ldr.BaseDllName.Buffer : NULL, &nt_name );
  
      switch (nts)
-@@ -2999,7 +3020,7 @@ static NTSTATUS load_dll( LPCWSTR load_p
+@@ -3012,7 +3033,7 @@ static NTSTATUS load_dll( LPCWSTR load_p
          case LO_BUILTIN:
          case LO_BUILTIN_NATIVE:
          case LO_DEFAULT:
@@ -197,7 +197,7 @@ diff -purN a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
              break;
          default:
              nts = STATUS_DLL_NOT_FOUND;
-@@ -3016,7 +3037,7 @@ static NTSTATUS load_dll( LPCWSTR load_p
+@@ -3029,7 +3050,7 @@ static NTSTATUS load_dll( LPCWSTR load_p
              case LO_BUILTIN:
              case LO_BUILTIN_NATIVE:
              case LO_DEFAULT:
@@ -206,7 +206,7 @@ diff -purN a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
                  break;
              default:
                  nts = STATUS_DLL_NOT_FOUND;
-@@ -3031,14 +3052,14 @@ static NTSTATUS load_dll( LPCWSTR load_p
+@@ -3044,14 +3065,14 @@ static NTSTATUS load_dll( LPCWSTR load_p
              {
              case LO_NATIVE:
              case LO_NATIVE_BUILTIN:
@@ -224,7 +224,7 @@ diff -purN a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
                  if (nts == STATUS_SUCCESS && loadorder == LO_DEFAULT &&
                      (MODULE_InitDLL( *pwm, DLL_WINE_PREATTACH, NULL ) != STATUS_SUCCESS))
                  {
-@@ -3048,7 +3069,7 @@ static NTSTATUS load_dll( LPCWSTR load_p
+@@ -3061,7 +3082,7 @@ static NTSTATUS load_dll( LPCWSTR load_p
                      nts = STATUS_DLL_NOT_FOUND;
                  }
                  if (nts == STATUS_DLL_NOT_FOUND)
@@ -233,7 +233,7 @@ diff -purN a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
                  break;
              default:
                  nts = STATUS_DLL_NOT_FOUND;
-@@ -3068,7 +3089,7 @@ static NTSTATUS load_dll( LPCWSTR load_p
+@@ -3081,7 +3102,7 @@ static NTSTATUS load_dll( LPCWSTR load_p
          case LO_BUILTIN:
          case LO_BUILTIN_NATIVE:
          case LO_DEFAULT:
@@ -242,7 +242,7 @@ diff -purN a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
              break;
          default:
              nts = STATUS_DLL_NOT_FOUND;
-@@ -3099,7 +3120,7 @@ NTSTATUS WINAPI DECLSPEC_HOTPATCH LdrLoa
+@@ -3112,7 +3133,7 @@ NTSTATUS WINAPI DECLSPEC_HOTPATCH LdrLoa
      RtlEnterCriticalSection( &loader_section );
  
      if (!path_name) path_name = NtCurrentTeb()->Peb->ProcessParameters->DllPath.Buffer;
@@ -251,7 +251,7 @@ diff -purN a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
  
      if (nts == STATUS_SUCCESS && !(wm->ldr.Flags & LDR_DONT_RESOLVE_REFS))
      {
-@@ -4048,7 +4069,7 @@ void __wine_process_init(void)
+@@ -4061,7 +4082,7 @@ void __wine_process_init(void)
      wine_dll_set_callback( load_builtin_callback );
  
      RtlInitUnicodeString( &nt_name, kernel32W );
@@ -261,8 +261,8 @@ diff -purN a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
          MESSAGE( "wine: could not load kernel32.dll, status %x\n", status );
          exit(1);
 diff -purN a/dlls/ntdll/loadorder.c b/dlls/ntdll/loadorder.c
---- a/dlls/ntdll/loadorder.c	2019-08-23 17:57:24.000000000 +0300
-+++ b/dlls/ntdll/loadorder.c	2019-09-12 20:10:12.579477723 +0300
+--- a/dlls/ntdll/loadorder.c	2019-11-06 18:04:35.000000000 +0200
++++ b/dlls/ntdll/loadorder.c	2019-11-16 17:58:53.444385436 +0200
 @@ -290,102 +290,165 @@ static inline enum loadorder get_env_loa
  
  
@@ -659,8 +659,8 @@ diff -purN a/dlls/ntdll/loadorder.c b/dlls/ntdll/loadorder.c
      return ret;
  }
 diff -purN a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
---- a/dlls/ntdll/ntdll_misc.h	2019-09-12 19:50:09.786372471 +0300
-+++ b/dlls/ntdll/ntdll_misc.h	2019-09-12 20:10:12.579477723 +0300
+--- a/dlls/ntdll/ntdll_misc.h	2019-11-16 17:44:13.518580313 +0200
++++ b/dlls/ntdll/ntdll_misc.h	2019-11-16 17:58:53.444385436 +0200
 @@ -263,6 +263,7 @@ enum loadorder
  };
  

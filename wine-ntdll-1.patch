@@ -1,0 +1,11 @@
+--- a/dlls/ntdll/ntdll.spec	
++++ a/dlls/ntdll/ntdll.spec	
+@@ -699,7 +699,7 @@ 
+ # Yes, Microsoft really misspelled this one!
+ # @ stub RtlGetLengthWithoutTrailingPathSeperators
+ @ stdcall RtlGetLongestNtPathLength()
+-# @ stub RtlGetNativeSystemInformation
++@ stdcall -private RtlGetNativeSystemInformation(long ptr long ptr) NtQuerySystemInformation
+ # @ stub RtlGetNextRange
+ @ stdcall RtlGetNtGlobalFlags()
+ @ stdcall RtlGetNtProductType(ptr)

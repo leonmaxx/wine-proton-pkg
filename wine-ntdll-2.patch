@@ -1,0 +1,20 @@
+diff -purN a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
+--- a/dlls/ntdll/virtual.c	2019-11-16 17:44:13.518580313 +0200
++++ b/dlls/ntdll/virtual.c	2019-11-16 17:46:08.431534813 +0200
+@@ -131,7 +131,7 @@ static void *address_space_start = (void
+ static const UINT page_shift = 12;
+ static const UINT_PTR page_mask = 0xfff;
+ static void *address_space_limit = (void *)0x7fffffff0000;
+-static void *user_space_limit    = (void *)0x7fffffff0000;
++static void *user_space_limit    = (void *)0x7ffffff0000;
+ static void *working_set_limit   = (void *)0x7fffffff0000;
+ static void *address_space_start = (void *)0x10000;
+ #else
+@@ -2506,6 +2506,7 @@ void virtual_set_large_address_space(BOO
+ {
+     IMAGE_NT_HEADERS *nt = RtlImageNtHeader( NtCurrentTeb()->Peb->ImageBaseAddress );
+ 
++    if (is_win64) return;
+     if (!(nt->FileHeader.Characteristics & IMAGE_FILE_LARGE_ADDRESS_AWARE) && !force_large_address) return;
+ 
+     /* no large address space on win9x */
