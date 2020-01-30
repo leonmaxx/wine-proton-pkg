@@ -7,34 +7,38 @@
 
 pkgname=wine-proton
 pkgver=4.11
-pkgrel=8
+pkgrel=12
 
-_pkgcommit=be27a0b6e31e483730e5df3ab601f339007713ee
+_pkgcommit=0f5912efb26db4210f8474dc7d1a998d7a3afa8a
 
 _pkgbasever=${pkgver/rc/-rc}
 
 source=("wine-proton-$pkgver-$pkgrel.zip::https://github.com/ValveSoftware/wine/archive/$_pkgcommit.zip"
         wine-ntdll.patch
-        wine-ntdll-1.patch
-        wine-ntdll-2.patch
-        wine-ntdll-3.patch
+        wine-ntdll-rtlsysinfo.patch
+        wine-ntdll-lowmem.patch
         wine-dllredirect.patch
         winecfg-staging.patch
         wine-d3d9-nine.patch
         proton-nocrash.patch
         proton-disable-menubuilder.patch
+        proton-steam-app-id.patch
+        vkd3d-versioned-root-sig-01.patch
+        vkd3d-versioned-root-sig-02.patch
         30-win32-aliases.conf
         wine-binfmt.conf)
-sha512sums=('41e8c10e9075b05e85060f062613d795f77d052aae4515dc781fc435d8edad26eb81957fb55924a63904db3488f800331e6e7dadb281ae14e84ceae32fa95766'
+sha512sums=('476447c66e109a925a70e23c3faa2e2d9d298e2381a7375b8e9c72b9b18099ab60cade3b02f0d87c1755778d6bd9fb1696e69d9f1efa4e0e6d3cd068d6b0b14d'
             'b6318b7ac2347e68419dd9d59804fb88ec5f9f3f09332101ca92e73f08d12b65637397dc666b6a5218d690e9003df96f3b5e5f31cee89900ebfdabce2998fab8'
             'bf7848ad720c748d4a3e8e8df84ca4cf77dcbdfe11fb36c909dbbc8ef8fe8b32739386d195cddb8139a175ffbac23199914a088f1d39b4de2d7ff09c7732a812'
-            'c6d8a7b32dba6a8efc9b3ec2b67a0c0cbf229a982d974f365a4b1d5e107881492ca34e2bbb5fee5c52db7e8b8d2ba9d708f6e34913553e07b1a7adad4975c65a'
-            'a4411228642a2da02dedbd5005d1b131b031b0c73f8aa9fe7217f8024bf45255f7f0c54c484de7dde0119688bc6244b407cffc0b5a3adf01bc3921dafa2c256d'
+            'a5eda5357718694989c0b8786dcaf742a764784b0ef0e10926b9c93bc73d49ca19bef3ce9f8d156cd527987594433ded07a2028467a8cdb1082a5cc214dd2788'
             '2a9dac77b11a64fac1d3230f39e8a1e57b469b6e86a4367cc593a7d9b2357c8e944d62a3819d3b50d5c8cc7b10c5204c17396bacb22991c6e35872f9c3b36911'
             '0993b719e582150ced4cf75c2bc21662372cea2be9008bd99f2c8aed25a9b16284834f1bd6f74443c3a22e91e0e2fd08e735ffbc4a0344513c4518f861e0248d'
             '0b522a0bcf0a9e913efdd99805e119b4282ea25afe2a3b09659ea445ef4076542377b5a8465e77c2a97d004f3a047f06e587bc3516e07c0adcf810064344c3d1'
             '5986f42780f557fe78c1b8a91aac6fac6793b8b051189c4bf8918d3e905e436df51817218694e220185643a368ae6a1339560fce813760ca275ac6e309690e61'
             '76bc381f1ddc26c62c9cb1c39d4e9c75e92c66583e4964d4bde9ceeca595e6623b4763601383ac676e2be6add4df52f851185cf01b6b18e650c7d4e6c6f1a2b0'
+            '2078c2774a6e3e1ca1a7c4ebadc57289f46694d2ba56a77ca81336335a453ea34d84423c18560c7f9d8d2cc62f65897fe91906892b0f13e5221305b21fec0a03'
+            '39aa8008de7045a357af7fcab9dcf8fa2daf3415eafc4d08570693260764c7aeb36188897b4f93d9e1b480b9816fb022421d07ad3fc454173b2f81cf02eb3344'
+            'cfe91ea1e8956fdc63fa393f8037c223acf058b98afd122ee6b2b32cfaaebe2bf5a53d664f6f807add44a4e1e16c4da4bfb25de816e48c09ccf12f1682a00767'
             '6e54ece7ec7022b3c9d94ad64bdf1017338da16c618966e8baf398e6f18f80f7b0576edf1d1da47ed77b96d577e4cbb2bb0156b0b11c183a0accf22654b0a2bb'
             'bdde7ae015d8a98ba55e84b86dc05aca1d4f8de85be7e4bd6187054bfe4ac83b5a20538945b63fb073caab78022141e9545685e4e3698c97ff173cf30859e285')
 
@@ -139,14 +143,16 @@ prepare() {
   # apply patches and reconfigure
   pushd $pkgname
   patch -p1 <../wine-ntdll.patch
-  patch -p1 <../wine-ntdll-1.patch
-  patch -p1 <../wine-ntdll-2.patch
-  patch -p1 <../wine-ntdll-3.patch
+  patch -p1 <../wine-ntdll-rtlsysinfo.patch
+  patch -p1 <../wine-ntdll-lowmem.patch
   patch -p1 <../wine-dllredirect.patch
   patch -p1 <../winecfg-staging.patch
   patch -p1 <../wine-d3d9-nine.patch
   patch -R -p1 <../proton-nocrash.patch
   patch -R -p1 <../proton-disable-menubuilder.patch
+  patch -R -p1 <../proton-steam-app-id.patch
+  patch -R -p1 <../vkd3d-versioned-root-sig-01.patch
+  patch -R -p1 <../vkd3d-versioned-root-sig-02.patch
 
   autoreconf
   tools/make_requests
