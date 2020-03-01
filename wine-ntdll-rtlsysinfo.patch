@@ -1,6 +1,7 @@
---- a/dlls/ntdll/ntdll.spec	
-+++ a/dlls/ntdll/ntdll.spec	
-@@ -699,7 +699,7 @@ 
+diff -purN '--exclude=*.orig' '--exclude=*.rej' a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
+--- a/dlls/ntdll/ntdll.spec	2020-02-08 17:05:58.617066203 +0200
++++ b/dlls/ntdll/ntdll.spec	2020-02-08 17:18:44.213617300 +0200
+@@ -700,7 +700,7 @@
  # Yes, Microsoft really misspelled this one!
  # @ stub RtlGetLengthWithoutTrailingPathSeperators
  @ stdcall RtlGetLongestNtPathLength()

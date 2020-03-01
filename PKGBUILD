@@ -6,36 +6,34 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-proton
-pkgver=4.11
-pkgrel=12
+pkgver=5.0
+pkgrel=3
 
-_pkgcommit=0f5912efb26db4210f8474dc7d1a998d7a3afa8a
+_pkgcommit=1a7d5eaf580cc78de7b9ec54cf2bd6814fc3c197
 
 _pkgbasever=${pkgver/rc/-rc}
 
 source=("wine-proton-$pkgver-$pkgrel.zip::https://github.com/ValveSoftware/wine/archive/$_pkgcommit.zip"
-        wine-ntdll.patch
         wine-ntdll-rtlsysinfo.patch
-        wine-ntdll-lowmem.patch
         wine-dllredirect.patch
         winecfg-staging.patch
         wine-d3d9-nine.patch
         proton-nocrash.patch
         proton-disable-menubuilder.patch
+        proton-win10.patch
         proton-steam-app-id.patch
         vkd3d-versioned-root-sig-01.patch
         vkd3d-versioned-root-sig-02.patch
         30-win32-aliases.conf
         wine-binfmt.conf)
-sha512sums=('476447c66e109a925a70e23c3faa2e2d9d298e2381a7375b8e9c72b9b18099ab60cade3b02f0d87c1755778d6bd9fb1696e69d9f1efa4e0e6d3cd068d6b0b14d'
-            'b6318b7ac2347e68419dd9d59804fb88ec5f9f3f09332101ca92e73f08d12b65637397dc666b6a5218d690e9003df96f3b5e5f31cee89900ebfdabce2998fab8'
-            'bf7848ad720c748d4a3e8e8df84ca4cf77dcbdfe11fb36c909dbbc8ef8fe8b32739386d195cddb8139a175ffbac23199914a088f1d39b4de2d7ff09c7732a812'
-            'a5eda5357718694989c0b8786dcaf742a764784b0ef0e10926b9c93bc73d49ca19bef3ce9f8d156cd527987594433ded07a2028467a8cdb1082a5cc214dd2788'
-            '2a9dac77b11a64fac1d3230f39e8a1e57b469b6e86a4367cc593a7d9b2357c8e944d62a3819d3b50d5c8cc7b10c5204c17396bacb22991c6e35872f9c3b36911'
+sha512sums=('43dddd8574dc58cdc4f78f738da969e398709bd6a3f29f8860c72f83e6086d501a560225bd019deda0e2222baa699ea910ae02dde808681b6402f6198b74d750'
+            '637e49c645b8933bebd517d34818a7cc5cc7e2e1b1cfd1711aae454e9f9467f7b75dac0fb44b3c66b742969b10141a724fa538e1e26b6b683563d869fb21b30e'
+            'ff2b1a7b5bd2b4552f35c1be9dc43e3bdc84ece67b968bebc09b9df460c9c383986cc80e39ffd3da9a371d3d265a00f8111bbb97d00339f71fa247c06e2be8b5'
             '0993b719e582150ced4cf75c2bc21662372cea2be9008bd99f2c8aed25a9b16284834f1bd6f74443c3a22e91e0e2fd08e735ffbc4a0344513c4518f861e0248d'
             '0b522a0bcf0a9e913efdd99805e119b4282ea25afe2a3b09659ea445ef4076542377b5a8465e77c2a97d004f3a047f06e587bc3516e07c0adcf810064344c3d1'
             '5986f42780f557fe78c1b8a91aac6fac6793b8b051189c4bf8918d3e905e436df51817218694e220185643a368ae6a1339560fce813760ca275ac6e309690e61'
             '76bc381f1ddc26c62c9cb1c39d4e9c75e92c66583e4964d4bde9ceeca595e6623b4763601383ac676e2be6add4df52f851185cf01b6b18e650c7d4e6c6f1a2b0'
+            '15e72719a7ca7af9ec9e7cbe89abe10ed85aff4d265e0e6d69e19495df35cf1f9aa557bb3de4104921f89b5366389b9cefd33bcbe9f97f93902ed5be9978d5ca'
             '2078c2774a6e3e1ca1a7c4ebadc57289f46694d2ba56a77ca81336335a453ea34d84423c18560c7f9d8d2cc62f65897fe91906892b0f13e5221305b21fec0a03'
             '39aa8008de7045a357af7fcab9dcf8fa2daf3415eafc4d08570693260764c7aeb36188897b4f93d9e1b480b9816fb022421d07ad3fc454173b2f81cf02eb3344'
             'cfe91ea1e8956fdc63fa393f8037c223acf058b98afd122ee6b2b32cfaaebe2bf5a53d664f6f807add44a4e1e16c4da4bfb25de816e48c09ccf12f1682a00767'
@@ -142,14 +140,13 @@ prepare() {
 
   # apply patches and reconfigure
   pushd $pkgname
-  patch -p1 <../wine-ntdll.patch
   patch -p1 <../wine-ntdll-rtlsysinfo.patch
-  patch -p1 <../wine-ntdll-lowmem.patch
   patch -p1 <../wine-dllredirect.patch
   patch -p1 <../winecfg-staging.patch
   patch -p1 <../wine-d3d9-nine.patch
   patch -R -p1 <../proton-nocrash.patch
   patch -R -p1 <../proton-disable-menubuilder.patch
+  patch -R -p1 <../proton-win10.patch
   patch -R -p1 <../proton-steam-app-id.patch
   patch -R -p1 <../vkd3d-versioned-root-sig-01.patch
   patch -R -p1 <../vkd3d-versioned-root-sig-02.patch
@@ -160,8 +157,12 @@ prepare() {
 
   # Doesn't compile without remove these flags as of 4.10
   export CFLAGS="${CFLAGS/-fno-plt/}"
-  export CXXFLAGS="${CXXFLAGS/-fno-plt/}"
+  export CFLAGS="${CFLAGS/-fstack-protector-strong/}"
+  export CPPFLAGS=
   export LDFLAGS="${LDFLAGS/,-z,now/}"
+
+  export CROSSCFLAGS="${CFLAGS/-fstack-protector-strong/} -fcf-protection=none -fno-stack-protector -fno-strict-aliasing"
+  export CROSSLDFLAGS="${LDFLAGS/,-z,relro/}"
 
   sed 's|OpenCL/opencl.h|CL/opencl.h|g' -i $pkgname/configure*
 
