@@ -7,9 +7,9 @@
 
 pkgname=wine-proton
 pkgver=5.0
-pkgrel=3
+pkgrel=6
 
-_pkgcommit=1a7d5eaf580cc78de7b9ec54cf2bd6814fc3c197
+_pkgcommit=0d172e8aecd6b45dcabfe097638f7009e6ba0a60
 
 _pkgbasever=${pkgver/rc/-rc}
 
@@ -26,7 +26,7 @@ source=("wine-proton-$pkgver-$pkgrel.zip::https://github.com/ValveSoftware/wine/
         vkd3d-versioned-root-sig-02.patch
         30-win32-aliases.conf
         wine-binfmt.conf)
-sha512sums=('43dddd8574dc58cdc4f78f738da969e398709bd6a3f29f8860c72f83e6086d501a560225bd019deda0e2222baa699ea910ae02dde808681b6402f6198b74d750'
+sha512sums=('1d3c411d895dfba9d69a6d7f7730f77c807356fa9347f0d86fd29aa0d511a63b457909f1fe92c0bd968c84570c1d70855402bd0c2ffd4565d8d946bf80dc2c70'
             '637e49c645b8933bebd517d34818a7cc5cc7e2e1b1cfd1711aae454e9f9467f7b75dac0fb44b3c66b742969b10141a724fa538e1e26b6b683563d869fb21b30e'
             'ff2b1a7b5bd2b4552f35c1be9dc43e3bdc84ece67b968bebc09b9df460c9c383986cc80e39ffd3da9a371d3d265a00f8111bbb97d00339f71fa247c06e2be8b5'
             '0993b719e582150ced4cf75c2bc21662372cea2be9008bd99f2c8aed25a9b16284834f1bd6f74443c3a22e91e0e2fd08e735ffbc4a0344513c4518f861e0248d'
