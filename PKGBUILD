@@ -6,15 +6,15 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-proton
-pkgver=5.13
-pkgrel=6
+pkgver=6.3
+pkgrel=2
 
 _winever=$pkgver
 _pkgbasever=${pkgver/rc/-rc}
 
-_wine_commit=c14054e6923c3cbb4163c24ce41fcf2d0815e84b
-_dxvk_commit=3f91cdbc126abde7b2334e739d08de0ef2edd1d2
-_vkd3d_commit=d003424bc826afd005c68f8a8f0d42e4dae00fd0
+_wine_commit=97f962cd469ee9b9b68d32e79849bf94cfe15581
+_dxvk_commit=f8a4ca555a6e5d89f5162a042bbae550902f4e49
+_vkd3d_commit=eca8e4956436123e5554edae6208d56073675cdc
 
 source=("$pkgname::git+https://github.com/ValveSoftware/wine.git#commit=$_wine_commit"
         "dxvk::git+https://github.com/ValveSoftware/dxvk.git#commit=$_dxvk_commit"
@@ -27,7 +27,7 @@ sha512sums=('SKIP'
             'SKIP'
             '6e54ece7ec7022b3c9d94ad64bdf1017338da16c618966e8baf398e6f18f80f7b0576edf1d1da47ed77b96d577e4cbb2bb0156b0b11c183a0accf22654b0a2bb'
             'bdde7ae015d8a98ba55e84b86dc05aca1d4f8de85be7e4bd6187054bfe4ac83b5a20538945b63fb073caab78022141e9545685e4e3698c97ff173cf30859e285'
-            '35c68b91c1de99bbf025a94c8d1d02760c408e166de7806d0700ea7851f877153c6b6252ee9b243767ccadb96a06c542b36b1cf292bead0ce42dbaf16f77b662')
+            '144af44d76bafea04a0a024be8a8f39c70e28306628353f3cb32b8bb485a7372b60bae9e4f9609ab269915764d4f567c51c6045e97ffc5ba0f1c30943c483cd0')
 
 pkgdesc="A compatibility layer for running Windows programs - Proton branch"
 url="https://github.com/ValveSoftware/Proton"
@@ -126,6 +126,15 @@ install=wine.install
 prepare() {
   # Revert unneeded Wine-Proton patches
   pushd $pkgname
+    # fixup, user32: Use new export to set LD_PRELOAD
+    git revert -n 97f962cd469ee9b9b68d32e79849bf94cfe15581
+  
+    # ntdll: Export a function to set a Unix environment variable.
+    git revert -n 12b4a3fb559cafd4b5fdb072dc4e2bb3aa1e95b1
+  
+    # dotnetfx35.exe: Add stub program.
+    git revert -n 1f8552e34a897a751b3f5135db0559fed7424988
+  
     # HACK: wineboot: Don't show "updating prefix" window
     git revert -n 285d64e7617ae31e3e03a6554404054cb5e9341f
 
@@ -142,7 +151,7 @@ prepare() {
     git revert -n 6f51cddc7717e269621e515e8e2e8afed49a2fa1
 
     # HACK: mshtml: Don't install wine-gecko on prefix creation
-    git revert -n 6f832f12e3280860e8d3eca942e59e23b4f6e8cb
+    git revert -n 903a5167a20f744b58b1e94bd111a3892b42653d
 
     # Font related
     git revert -n 106fd7119b2d88dc4dece7b5058d73854a7aae2e
@@ -161,7 +170,7 @@ prepare() {
     git revert -n 762405d42e29a60e6eb5620cbb6693c43777268f
 
     # HACK: steam: ntdll: Setup steamclient trampolines to lsteamclient.
-    git revert -n c9c923a600e0dc7bdee5b108bcc655129f8a1c55
+    git revert -n 916c2d0af18314f57734c1a9344bb9b1b1f20fbd
 
     patch -Np1 < ../wine.inf-Remove-Steam-registry-entries.patch
     #autoreconf
