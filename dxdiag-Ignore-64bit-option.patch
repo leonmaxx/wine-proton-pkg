@@ -1,0 +1,16 @@
+diff -purN a/programs/dxdiag/main.c b/programs/dxdiag/main.c
+--- a/programs/dxdiag/main.c	2021-04-13 18:37:11.961818569 +0300
++++ b/programs/dxdiag/main.c	2021-04-16 23:14:16.562209559 +0300
+@@ -171,6 +171,12 @@ static BOOL process_command_line(const W
+             cmdline += 8;
+             break;
+ 
++        case '6':
++            if (wcsnicmp(cmdline, L"64bit", 5))
++                return FALSE;
++            cmdline += 5;
++            break;
++
+         default:
+             return FALSE;
+         }

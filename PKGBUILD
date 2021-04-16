@@ -21,13 +21,15 @@ source=("$pkgname::git+https://github.com/ValveSoftware/wine.git#commit=$_wine_c
         "vkd3d-proton::git+https://github.com/HansKristian-Work/vkd3d-proton.git#commit=$_vkd3d_commit"
         30-win32-aliases.conf
         wine-binfmt.conf
-        wine.inf-Remove-Steam-registry-entries.patch)
+        wine.inf-Remove-Steam-registry-entries.patch
+        dxdiag-Ignore-64bit-option.patch)
 sha512sums=('SKIP'
             'SKIP'
             'SKIP'
             '6e54ece7ec7022b3c9d94ad64bdf1017338da16c618966e8baf398e6f18f80f7b0576edf1d1da47ed77b96d577e4cbb2bb0156b0b11c183a0accf22654b0a2bb'
             'bdde7ae015d8a98ba55e84b86dc05aca1d4f8de85be7e4bd6187054bfe4ac83b5a20538945b63fb073caab78022141e9545685e4e3698c97ff173cf30859e285'
-            '144af44d76bafea04a0a024be8a8f39c70e28306628353f3cb32b8bb485a7372b60bae9e4f9609ab269915764d4f567c51c6045e97ffc5ba0f1c30943c483cd0')
+            '144af44d76bafea04a0a024be8a8f39c70e28306628353f3cb32b8bb485a7372b60bae9e4f9609ab269915764d4f567c51c6045e97ffc5ba0f1c30943c483cd0'
+            '6b62ffdee725d78b7c36aa83843bb767fcd85470d4ea3ce2059d399fcfed6e67db7217df3a9faeca3ee2c676c2857f313177ab8be679b108d20fc188e0551f95')
 
 pkgdesc="A compatibility layer for running Windows programs - Proton branch"
 url="https://github.com/ValveSoftware/Proton"
@@ -173,6 +175,7 @@ prepare() {
     git revert -n 916c2d0af18314f57734c1a9344bb9b1b1f20fbd
 
     patch -Np1 < ../wine.inf-Remove-Steam-registry-entries.patch
+    patch -Np1 < ../dxdiag-Ignore-64bit-option.patch
     #autoreconf
     #tools/make_requests
   popd
