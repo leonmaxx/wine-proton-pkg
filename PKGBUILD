@@ -183,14 +183,23 @@ prepare() {
   pushd vkd3d-proton
     git submodule update --init --recursive
   popd
-
+  
   # Doesn't compile without remove these flags as of 4.10
   export CFLAGS="${CFLAGS/-fno-plt/}"
-  export CPPFLAGS="${CPPFLAGS/-fno-plt/}"
+  export CXXFLAGS="${CXXFLAGS/-fno-plt/}"
   export LDFLAGS="${LDFLAGS/,-z,now/}"
   # Doesn't compile with -z,relro flag as of 5.13-5
   export LDFLAGS="${LDFLAGS/,-z,relro/}"
+  # Doesn't compile with this options as of 6.3-3
+  export CFLAGS="${CFLAGS/-Wp,-D_FORTIFY_SOURCE=2,-D_GLIBCXX_ASSERTIONS/}"
+  export CXXFLAGS="${CXXFLAGS/-Wp,-D_FORTIFY_SOURCE=2,-D_GLIBCXX_ASSERTIONS/}"
 
+  # Disable stack clash and control flow protection
+  export CFLAGS="${CFLAGS/-fstack-clash-protection/}"
+  export CFLAGS="${CFLAGS/-fcf-protection/}"
+  export CXXFLAGS="${CXXFLAGS/-fstack-clash-protection/}"
+  export CXXFLAGS="${CXXFLAGS/-fcf-protection/}"
+  
   sed 's|OpenCL/opencl.h|CL/opencl.h|g' -i $pkgname/configure*
 
   # Get rid of old build dirs
@@ -237,8 +246,6 @@ build() {
 
   export CFLAGS="${CFLAGS/-O2/}"
   export CPPFLAGS="${CPPFLAGS/-O2/}"
-  export CFLAGS="${CFLAGS/-D_FORTIFY_SOURCE=2/}"
-  export CPPFLAGS="${CPPFLAGS/-D_FORTIFY_SOURCE=2/}"
 
   msg2 "Building DXVK-32..."
 
