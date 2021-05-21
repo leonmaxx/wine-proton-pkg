@@ -7,12 +7,12 @@
 
 pkgname=wine-proton
 pkgver=6.3
-pkgrel=3
+pkgrel=4
 
 _winever=$pkgver
 _pkgbasever=${pkgver/rc/-rc}
 
-_wine_commit=1f1b83506e0b896e9cd9b01a152ec2b72b7b73cb
+_wine_commit=f94b0f7590d43bb3e6aefcc6e16cf69bffc25122
 _dxvk_commit=f8a4ca555a6e5d89f5162a042bbae550902f4e49
 _vkd3d_commit=3ed3526332f53d7d35cf1b685fa8096b01f26ff0
 
@@ -128,6 +128,9 @@ install=wine.install
 prepare() {
   # Revert unneeded Wine-Proton patches
   pushd $pkgname
+    # wine.inf: Associate the steam protocol with steam.exe.
+    git revert -n bc633e8c15139e66ccf7327e853b87ff9030fda0
+
     # fixup, user32: Use new export to set LD_PRELOAD
     git revert -n 97f962cd469ee9b9b68d32e79849bf94cfe15581
   
