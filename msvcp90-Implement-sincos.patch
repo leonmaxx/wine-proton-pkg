@@ -1,0 +1,19 @@
+diff -purN a/dlls/msvcp90/math.c b/dlls/msvcp90/math.c
+--- a/dlls/msvcp90/math.c	2021-07-27 15:24:06.654805021 +0300
++++ b/dlls/msvcp90/math.c	2021-07-27 15:37:35.403902644 +0300
+@@ -2395,3 +2395,15 @@ float __cdecl std__XLgamma_float(float z
+ {
+     return std__XLgamma_double(z);
+ }
++
++#pragma GCC optimize ("O0")
++
++static void sincos(double a, double* s, double* c) {
++  *s = sin(a);
++  *c = cos(a);
++}
++
++static void sincosf(float a, float* s, float* c) {
++  *s = sinf(a);
++  *c = cosf(a);
++}

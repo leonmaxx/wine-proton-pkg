@@ -1,0 +1,21 @@
+diff -purN a/tools/wrc/wrc.c b/tools/wrc/wrc.c
+--- a/tools/wrc/wrc.c	2021-07-26 12:41:59.633205323 +0300
++++ b/tools/wrc/wrc.c	2021-07-26 14:30:52.518241638 +0300
+@@ -188,7 +188,7 @@ enum long_options_values
+ };
+ 
+ static const char short_options[] =
+-	"b:D:Ef:F:hi:I:J:l:m:o:O:ruU:v";
++	"b:D:Ef:F:hi:I:J:l:m:o:O:ruU:vp::";
+ static const struct option long_options[] = {
+ 	{ "debug", 1, NULL, LONG_OPT_DEBUG },
+ 	{ "define", 1, NULL, 'D' },
+@@ -524,6 +524,8 @@ int main(int argc,char *argv[])
+ 		case 'v':
+ 			debuglevel = DEBUGLEVEL_CHAT;
+ 			break;
++		case 'p':
++			if (strcmp(optarg,"thread") == 0) break;
+ 		default:
+ 			lose++;
+ 			break;

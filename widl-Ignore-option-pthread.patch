@@ -1,0 +1,20 @@
+diff -purN a/tools/widl/widl.c b/tools/widl/widl.c
+--- a/tools/widl/widl.c	2021-07-26 11:52:28.704394747 +0300
++++ b/tools/widl/widl.c	2021-07-26 12:57:07.364142226 +0300
+@@ -185,7 +185,7 @@ enum {
+ };
+ 
+ static const char short_options[] =
+-    "b:cC:d:D:EhH:I:m:No:O:pP:rsS:tT:uU:VW";
++    "b:cC:d:D:EhH:I:m:No:O:p::P:rsS:tT:uU:VW";
+ static const struct option long_options[] = {
+     { "acf", 1, NULL, ACF_OPTION },
+     { "app_config", 0, NULL, APP_CONFIG_OPTION },
+@@ -726,6 +726,7 @@ int main(int argc,char *argv[])
+       else error( "Invalid argument '-O%s'\n", optarg );
+       break;
+     case 'p':
++      if (optarg && strcmp(optarg, "thread") == 0) break;
+       do_everything = 0;
+       do_proxies = 1;
+       break;

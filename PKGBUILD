@@ -7,14 +7,14 @@
 
 pkgname=wine-proton
 pkgver=6.3
-pkgrel=4
+pkgrel=5
 
 _winever=$pkgver
 _pkgbasever=${pkgver/rc/-rc}
 
-_wine_commit=f94b0f7590d43bb3e6aefcc6e16cf69bffc25122
-_dxvk_commit=f8a4ca555a6e5d89f5162a042bbae550902f4e49
-_vkd3d_commit=3ed3526332f53d7d35cf1b685fa8096b01f26ff0
+_wine_commit=eef39a6e9c0a9b939521c7a5119225b4823b83cc
+_dxvk_commit=726b2138c42825407402c200d9ca495aecbdc96b
+_vkd3d_commit=72d9b322b89c325520e8f3060a8b60f719c52d6e
 
 source=("$pkgname::git+https://github.com/ValveSoftware/wine.git#commit=$_wine_commit"
         "dxvk::git+https://github.com/ValveSoftware/dxvk.git#commit=$_dxvk_commit"
@@ -22,14 +22,24 @@ source=("$pkgname::git+https://github.com/ValveSoftware/wine.git#commit=$_wine_c
         30-win32-aliases.conf
         wine-binfmt.conf
         wine.inf-Remove-Steam-registry-entries.patch
-        dxdiag-Ignore-64bit-option.patch)
+        dxdiag-Ignore-64bit-option.patch
+        ucrtbase-Implement-sincos.patch
+        msvcp90-Implement-sincos.patch
+        widl-Ignore-option-pthread.patch
+        wrc-Ignore-option-pthread.patch
+        makefile-Proton-branding.patch)
 sha512sums=('SKIP'
             'SKIP'
             'SKIP'
             '6e54ece7ec7022b3c9d94ad64bdf1017338da16c618966e8baf398e6f18f80f7b0576edf1d1da47ed77b96d577e4cbb2bb0156b0b11c183a0accf22654b0a2bb'
             'bdde7ae015d8a98ba55e84b86dc05aca1d4f8de85be7e4bd6187054bfe4ac83b5a20538945b63fb073caab78022141e9545685e4e3698c97ff173cf30859e285'
             '144af44d76bafea04a0a024be8a8f39c70e28306628353f3cb32b8bb485a7372b60bae9e4f9609ab269915764d4f567c51c6045e97ffc5ba0f1c30943c483cd0'
-            '6b62ffdee725d78b7c36aa83843bb767fcd85470d4ea3ce2059d399fcfed6e67db7217df3a9faeca3ee2c676c2857f313177ab8be679b108d20fc188e0551f95')
+            '6b62ffdee725d78b7c36aa83843bb767fcd85470d4ea3ce2059d399fcfed6e67db7217df3a9faeca3ee2c676c2857f313177ab8be679b108d20fc188e0551f95'
+            '03d5854d3e85c861e3d9e1fbdb98130571eaac1f3483e3bb4a650cd2b0432d7d43a08ecd94ec1c9130db5bce27da06123731b37330abb5e77ef768619c89ca82'
+            'cc98004a23a28192067d3976abfb80db9598a5a094ec2457b69be4920f0320d9c9a2f1eecac6cce4f9e71f7000f5bd81274b403bfebfed90003a6b803fe7be6e'
+            '14d156e0c741f53717389a18dc513208022bf57b0ebc38723eac0f41d59581850ce8adc777c6f5a6ab6e490a24083251a804e01770fd71cefac187410dcb4bfc'
+            'debb94bf2a74afbe1b3c7f564c4dc2f25ac268bdedf7974c431943a1f63a59f9f90f861bc752736f21359a4cb40e526b238a973876f165ec09898d93d4c75415'
+            '2f7bcc1cd02e7166833b393004d984967f3a656df9f428a66a6c36b9c6f5cfd9203f8e4f4a7a2ba736b059e4999418e6ddb65a5b5b50b42fba253d05e04442c5')
 
 pkgdesc="A compatibility layer for running Windows programs - Proton branch"
 url="https://github.com/ValveSoftware/Proton"
@@ -134,6 +144,9 @@ prepare() {
     # fixup, user32: Use new export to set LD_PRELOAD
     git revert -n 97f962cd469ee9b9b68d32e79849bf94cfe15581
   
+    # ntdll: Write crash log when we are missing a module
+    git revert -n 4a38de8099c90692414eadf46007323e62cccd4d
+  
     # ntdll: Export a function to set a Unix environment variable.
     git revert -n 12b4a3fb559cafd4b5fdb072dc4e2bb3aa1e95b1
   
@@ -179,6 +192,10 @@ prepare() {
 
     patch -Np1 < ../wine.inf-Remove-Steam-registry-entries.patch
     patch -Np1 < ../dxdiag-Ignore-64bit-option.patch
+    patch -Np1 < ../ucrtbase-Implement-sincos.patch
+    patch -Np1 < ../widl-Ignore-option-pthread.patch
+    patch -Np1 < ../wrc-Ignore-option-pthread.patch
+    patch -Np1 < ../msvcp90-Implement-sincos.patch
     #autoreconf
     #tools/make_requests
   popd
@@ -194,8 +211,8 @@ prepare() {
   # Doesn't compile with -z,relro flag as of 5.13-5
   export LDFLAGS="${LDFLAGS/,-z,relro/}"
   # Doesn't compile with this options as of 6.3-3
-  export CFLAGS="${CFLAGS/-Wp,-D_FORTIFY_SOURCE=2,-D_GLIBCXX_ASSERTIONS/}"
-  export CXXFLAGS="${CXXFLAGS/-Wp,-D_FORTIFY_SOURCE=2,-D_GLIBCXX_ASSERTIONS/}"
+  export CFLAGS="${CFLAGS/-Wp,-D_FORTIFY_SOURCE=2/}"
+  export CXXFLAGS="${CXXFLAGS/-Wp,-D_FORTIFY_SOURCE=2/}"
 
   # Disable stack clash and control flow protection
   export CFLAGS="${CFLAGS/-fstack-clash-protection/}"
@@ -230,6 +247,7 @@ build() {
     --enable-win64 \
     --disable-tests
 
+  patch -p1 < ../makefile-Proton-branding.patch
   make
 
   msg2 "Building Wine-32..."
@@ -244,6 +262,7 @@ build() {
     --with-wine64="$srcdir/$pkgname-64-build" \
     --disable-tests
 
+  patch -p1 < ../makefile-Proton-branding.patch
   make
 
 
@@ -287,8 +306,9 @@ package() {
 
   msg2 "Packaging DXVK-32..."
   cd "$srcdir/dxvk-32-build/bin"
-  for dll in d3d9 d3d10core d3d11 dxvk_config; do
-    rm -f "$pkgdir/usr/lib32/wine/$dll"
+  rm -f "$pkgdir/usr/lib32/wine/dxgi.dll.so"
+  for dll in d3d9 d3d10core d3d11 dxgi dxvk_config; do
+    rm -f "$pkgdir/usr/lib32/wine/$dll.dll"
     $srcdir/$pkgname-64-build/tools/winebuild/winebuild --builtin $dll.dll
     cp $dll.dll "$pkgdir/usr/lib32/wine/$dll.dll"
   done
@@ -308,8 +328,9 @@ package() {
 
   msg2 "Packaging DXVK-64..."
   cd "$srcdir/dxvk-64-build/bin"
-  for dll in d3d9 d3d10core d3d11 dxvk_config; do
-    rm -f "$pkgdir/usr/lib/wine/$dll"
+  rm -f "$pkgdir/usr/lib/wine/dxgi.dll.so"
+  for dll in d3d9 d3d10core d3d11 dxgi dxvk_config; do
+    rm -f "$pkgdir/usr/lib/wine/$dll.dll"
     $srcdir/$pkgname-64-build/tools/winebuild/winebuild --builtin $dll.dll
     cp $dll.dll "$pkgdir/usr/lib/wine/$dll.dll"
   done
