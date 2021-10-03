@@ -7,14 +7,14 @@
 
 pkgname=wine-proton
 pkgver=6.3
-pkgrel=5
+pkgrel=7
 
 _winever=$pkgver
 _pkgbasever=${pkgver/rc/-rc}
 
-_wine_commit=eef39a6e9c0a9b939521c7a5119225b4823b83cc
-_dxvk_commit=726b2138c42825407402c200d9ca495aecbdc96b
-_vkd3d_commit=72d9b322b89c325520e8f3060a8b60f719c52d6e
+_wine_commit=5848899423dbbf763997577e476cf630689c59c6
+_dxvk_commit=b63ceedaef9333d82056e0fca71ef6a9165e3011
+_vkd3d_commit=173b8ecef016661ce3189018aa02923799cdc5ca
 
 source=("$pkgname::git+https://github.com/ValveSoftware/wine.git#commit=$_wine_commit"
         "dxvk::git+https://github.com/ValveSoftware/dxvk.git#commit=$_dxvk_commit"
@@ -33,7 +33,7 @@ sha512sums=('SKIP'
             'SKIP'
             '6e54ece7ec7022b3c9d94ad64bdf1017338da16c618966e8baf398e6f18f80f7b0576edf1d1da47ed77b96d577e4cbb2bb0156b0b11c183a0accf22654b0a2bb'
             'bdde7ae015d8a98ba55e84b86dc05aca1d4f8de85be7e4bd6187054bfe4ac83b5a20538945b63fb073caab78022141e9545685e4e3698c97ff173cf30859e285'
-            '144af44d76bafea04a0a024be8a8f39c70e28306628353f3cb32b8bb485a7372b60bae9e4f9609ab269915764d4f567c51c6045e97ffc5ba0f1c30943c483cd0'
+            'ff395dd532f6e7aa3e4017b91122a45380bffd9c9667d9ee24761aba3106697c5ee9cd03b4138a8c07cfe539889bf96023ee0384448e6864dae5875605316458'
             '6b62ffdee725d78b7c36aa83843bb767fcd85470d4ea3ce2059d399fcfed6e67db7217df3a9faeca3ee2c676c2857f313177ab8be679b108d20fc188e0551f95'
             '03d5854d3e85c861e3d9e1fbdb98130571eaac1f3483e3bb4a650cd2b0432d7d43a08ecd94ec1c9130db5bce27da06123731b37330abb5e77ef768619c89ca82'
             'cc98004a23a28192067d3976abfb80db9598a5a094ec2457b69be4920f0320d9c9a2f1eecac6cce4f9e71f7000f5bd81274b403bfebfed90003a6b803fe7be6e'
@@ -138,8 +138,11 @@ install=wine.install
 prepare() {
   # Revert unneeded Wine-Proton patches
   pushd $pkgname
+    # wine.inf: Don't use DDE for winebrowser by default. 
+    # git revert -n 2729328ac86bf14706006b0de54431f753a0c14c
+  
     # wine.inf: Associate the steam protocol with steam.exe.
-    git revert -n bc633e8c15139e66ccf7327e853b87ff9030fda0
+    # git revert -n bc633e8c15139e66ccf7327e853b87ff9030fda0
 
     # fixup, user32: Use new export to set LD_PRELOAD
     git revert -n 97f962cd469ee9b9b68d32e79849bf94cfe15581
@@ -157,7 +160,7 @@ prepare() {
     git revert -n 285d64e7617ae31e3e03a6554404054cb5e9341f
 
     # wine.inf: Associate the "steam" protocol with winebrowser.
-    git revert -n 0e40743b6d409bc2b669eac7ad6ce379be22fc17
+    # git revert -n 0e40743b6d409bc2b669eac7ad6ce379be22fc17
 
     # wine.inf: Don't show crash dialog by default
     git revert -n 486bcb9740dc1735ccf1335075bcf7d3b3698e00
@@ -172,8 +175,9 @@ prepare() {
     git revert -n 903a5167a20f744b58b1e94bd111a3892b42653d
 
     # Font related
+    git revert -n 9dbcb3b5f845e5f31093677804b0eada1bdc25b8
     git revert -n 106fd7119b2d88dc4dece7b5058d73854a7aae2e
-    git revert -n 781785fad4de09af31ee0cbd2983dac036f58ff3
+    #git revert -n 7b5266d81e153d0357122047386418d255d08650
 
     # HACK: shell32: Never create links to the user's home dirs
     git revert -n d3477cd06f80c3ababa4cff3133933ed815b9a48
@@ -196,8 +200,9 @@ prepare() {
     patch -Np1 < ../widl-Ignore-option-pthread.patch
     patch -Np1 < ../wrc-Ignore-option-pthread.patch
     patch -Np1 < ../msvcp90-Implement-sincos.patch
+    
     #autoreconf
-    #tools/make_requests
+    tools/make_requests
   popd
 
   pushd vkd3d-proton
@@ -211,8 +216,8 @@ prepare() {
   # Doesn't compile with -z,relro flag as of 5.13-5
   export LDFLAGS="${LDFLAGS/,-z,relro/}"
   # Doesn't compile with this options as of 6.3-3
-  export CFLAGS="${CFLAGS/-Wp,-D_FORTIFY_SOURCE=2/}"
-  export CXXFLAGS="${CXXFLAGS/-Wp,-D_FORTIFY_SOURCE=2/}"
+  export CFLAGS="${CFLAGS/-Wp,-D_FORTIFY_SOURCE=2,-D_GLIBCXX_ASSERTIONS/}"
+  export CXXFLAGS="${CXXFLAGS/-Wp,-D_FORTIFY_SOURCE=2,-D_GLIBCXX_ASSERTIONS/}"
 
   # Disable stack clash and control flow protection
   export CFLAGS="${CFLAGS/-fstack-clash-protection/}"
