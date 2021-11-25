@@ -7,14 +7,14 @@
 
 pkgname=wine-proton
 pkgver=6.3
-pkgrel=7
+pkgrel=8
 
 _winever=$pkgver
 _pkgbasever=${pkgver/rc/-rc}
 
-_wine_commit=5848899423dbbf763997577e476cf630689c59c6
-_dxvk_commit=b63ceedaef9333d82056e0fca71ef6a9165e3011
-_vkd3d_commit=173b8ecef016661ce3189018aa02923799cdc5ca
+_wine_commit=03891654faf9271d81240faf9cd4f471ca5832f9
+_dxvk_commit=78ef4cfd92cb7f448292aaca83091914ab271257
+_vkd3d_commit=0251b4045c2f84df4defe751b52e1475b74f3337
 
 source=("$pkgname::git+https://github.com/ValveSoftware/wine.git#commit=$_wine_commit"
         "dxvk::git+https://github.com/ValveSoftware/dxvk.git#commit=$_dxvk_commit"
@@ -22,6 +22,7 @@ source=("$pkgname::git+https://github.com/ValveSoftware/wine.git#commit=$_wine_c
         30-win32-aliases.conf
         wine-binfmt.conf
         wine.inf-Remove-Steam-registry-entries.patch
+        appwiz.cpl-Fix-Mono-package-download.patch
         dxdiag-Ignore-64bit-option.patch
         ucrtbase-Implement-sincos.patch
         msvcp90-Implement-sincos.patch
@@ -33,7 +34,8 @@ sha512sums=('SKIP'
             'SKIP'
             '6e54ece7ec7022b3c9d94ad64bdf1017338da16c618966e8baf398e6f18f80f7b0576edf1d1da47ed77b96d577e4cbb2bb0156b0b11c183a0accf22654b0a2bb'
             'bdde7ae015d8a98ba55e84b86dc05aca1d4f8de85be7e4bd6187054bfe4ac83b5a20538945b63fb073caab78022141e9545685e4e3698c97ff173cf30859e285'
-            'ff395dd532f6e7aa3e4017b91122a45380bffd9c9667d9ee24761aba3106697c5ee9cd03b4138a8c07cfe539889bf96023ee0384448e6864dae5875605316458'
+            'ab5b7a5b075ec1e0774b8cd84a73b9169e4bad89df1d1747faeb51ce07d523c7c75f7388881e27afec047541b176280453ad91a7a6a335042673382b2019a7f4'
+            'b51010d26690cd0b5e8d1305434cf42a660ecf18dd35cc04c2f35e569435e519dbf0cdc3e955e765d670755d61bec776350f83e249b1a665328a6ed797812176'
             '6b62ffdee725d78b7c36aa83843bb767fcd85470d4ea3ce2059d399fcfed6e67db7217df3a9faeca3ee2c676c2857f313177ab8be679b108d20fc188e0551f95'
             '03d5854d3e85c861e3d9e1fbdb98130571eaac1f3483e3bb4a650cd2b0432d7d43a08ecd94ec1c9130db5bce27da06123731b37330abb5e77ef768619c89ca82'
             'cc98004a23a28192067d3976abfb80db9598a5a094ec2457b69be4920f0320d9c9a2f1eecac6cce4f9e71f7000f5bd81274b403bfebfed90003a6b803fe7be6e'
@@ -92,7 +94,7 @@ makedepends=(autoconf ncurses bison perl fontforge flex mingw-w64-gcc
   sdl2                  lib32-sdl2
   vkd3d                 lib32-vkd3d
   libcups               lib32-libcups
-  sane
+  sane                  meson
   libgphoto2
   gsm
   ffmpeg
@@ -175,6 +177,8 @@ prepare() {
     git revert -n 903a5167a20f744b58b1e94bd111a3892b42653d
 
     # Font related
+    git revert -n 2974307b5063c26283bf177a2dd823d1972af216
+    git revert -n bf82f60052320c5c4396fa81a952fc243e03dd79
     git revert -n 9dbcb3b5f845e5f31093677804b0eada1bdc25b8
     git revert -n 106fd7119b2d88dc4dece7b5058d73854a7aae2e
     #git revert -n 7b5266d81e153d0357122047386418d255d08650
@@ -195,6 +199,7 @@ prepare() {
     git revert -n 916c2d0af18314f57734c1a9344bb9b1b1f20fbd
 
     patch -Np1 < ../wine.inf-Remove-Steam-registry-entries.patch
+    patch -Np1 < ../appwiz.cpl-Fix-Mono-package-download.patch
     patch -Np1 < ../dxdiag-Ignore-64bit-option.patch
     patch -Np1 < ../ucrtbase-Implement-sincos.patch
     patch -Np1 < ../widl-Ignore-option-pthread.patch
@@ -216,8 +221,9 @@ prepare() {
   # Doesn't compile with -z,relro flag as of 5.13-5
   export LDFLAGS="${LDFLAGS/,-z,relro/}"
   # Doesn't compile with this options as of 6.3-3
-  export CFLAGS="${CFLAGS/-Wp,-D_FORTIFY_SOURCE=2,-D_GLIBCXX_ASSERTIONS/}"
-  export CXXFLAGS="${CXXFLAGS/-Wp,-D_FORTIFY_SOURCE=2,-D_GLIBCXX_ASSERTIONS/}"
+  export CFLAGS="${CFLAGS/-Wp,-D_FORTIFY_SOURCE=2/}"
+  export CXXFLAGS="${CXXFLAGS/-Wp,-D_FORTIFY_SOURCE=2/}"
+  export CXXFLAGS="${CXXFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS/}"
 
   # Disable stack clash and control flow protection
   export CFLAGS="${CFLAGS/-fstack-clash-protection/}"
