@@ -7,7 +7,7 @@
 
 pkgname=wine-proton
 pkgver=6.3
-pkgrel=8
+pkgrel=8.1
 
 _winever=$pkgver
 _pkgbasever=${pkgver/rc/-rc}
@@ -23,6 +23,7 @@ source=("$pkgname::git+https://github.com/ValveSoftware/wine.git#commit=$_wine_c
         wine-binfmt.conf
         wine.inf-Remove-Steam-registry-entries.patch
         appwiz.cpl-Fix-Mono-package-download.patch
+        wldap32-Update.patch
         dxdiag-Ignore-64bit-option.patch
         ucrtbase-Implement-sincos.patch
         msvcp90-Implement-sincos.patch
@@ -36,6 +37,7 @@ sha512sums=('SKIP'
             'bdde7ae015d8a98ba55e84b86dc05aca1d4f8de85be7e4bd6187054bfe4ac83b5a20538945b63fb073caab78022141e9545685e4e3698c97ff173cf30859e285'
             'ab5b7a5b075ec1e0774b8cd84a73b9169e4bad89df1d1747faeb51ce07d523c7c75f7388881e27afec047541b176280453ad91a7a6a335042673382b2019a7f4'
             'b51010d26690cd0b5e8d1305434cf42a660ecf18dd35cc04c2f35e569435e519dbf0cdc3e955e765d670755d61bec776350f83e249b1a665328a6ed797812176'
+            '999f91d6912456023ded8210e9ff21b30178b17af05f4926f5e2739c48eb68ba3e7c22b34842ad1d2073ce7c56fc191c24c2fce5a09a16499afab0bf153a974e'
             '6b62ffdee725d78b7c36aa83843bb767fcd85470d4ea3ce2059d399fcfed6e67db7217df3a9faeca3ee2c676c2857f313177ab8be679b108d20fc188e0551f95'
             '03d5854d3e85c861e3d9e1fbdb98130571eaac1f3483e3bb4a650cd2b0432d7d43a08ecd94ec1c9130db5bce27da06123731b37330abb5e77ef768619c89ca82'
             'cc98004a23a28192067d3976abfb80db9598a5a094ec2457b69be4920f0320d9c9a2f1eecac6cce4f9e71f7000f5bd81274b403bfebfed90003a6b803fe7be6e'
@@ -200,6 +202,7 @@ prepare() {
 
     patch -Np1 < ../wine.inf-Remove-Steam-registry-entries.patch
     patch -Np1 < ../appwiz.cpl-Fix-Mono-package-download.patch
+    patch -Np1 < ../wldap32-Update.patch
     patch -Np1 < ../dxdiag-Ignore-64bit-option.patch
     patch -Np1 < ../ucrtbase-Implement-sincos.patch
     patch -Np1 < ../widl-Ignore-option-pthread.patch
