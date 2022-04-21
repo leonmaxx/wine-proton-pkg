@@ -1,21 +1,21 @@
 diff -purN a/tools/wrc/wrc.c b/tools/wrc/wrc.c
---- a/tools/wrc/wrc.c	2021-07-26 12:41:59.633205323 +0300
-+++ b/tools/wrc/wrc.c	2021-07-26 14:30:52.518241638 +0300
-@@ -188,7 +188,7 @@ enum long_options_values
+--- a/tools/wrc/wrc.c	2022-04-21 23:46:36.884356819 +0300
++++ b/tools/wrc/wrc.c	2022-04-22 00:11:13.870057298 +0300
+@@ -171,7 +171,7 @@ enum long_options_values
  };
  
  static const char short_options[] =
 -	"b:D:Ef:F:hi:I:J:l:m:o:O:ruU:v";
-+	"b:D:Ef:F:hi:I:J:l:m:o:O:ruU:vp::";
- static const struct option long_options[] = {
- 	{ "debug", 1, NULL, LONG_OPT_DEBUG },
- 	{ "define", 1, NULL, 'D' },
-@@ -524,6 +524,8 @@ int main(int argc,char *argv[])
- 		case 'v':
- 			debuglevel = DEBUGLEVEL_CHAT;
- 			break;
-+		case 'p':
-+			if (strcmp(optarg,"thread") == 0) break;
- 		default:
- 			lose++;
- 			break;
++	"b:D:Ef:F:hi:I:J:l:m:o:O:p::ruU:v";
+ static const struct long_option long_options[] = {
+ 	{ "debug", 1, LONG_OPT_DEBUG },
+ 	{ "define", 1, 'D' },
+@@ -422,6 +422,8 @@ static void option_callback( int optc, c
+     case 'v':
+         debuglevel = DEBUGLEVEL_CHAT;
+         break;
++    case 'p':
++        if (strcmp(optarg,"thread") == 0) break;
+     case '?':
+         fprintf(stderr, "wrc: %s\n\n%s", optarg, usage);
+         exit(1);

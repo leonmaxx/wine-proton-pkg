@@ -6,15 +6,15 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-proton
-pkgver=6.3
-pkgrel=8.1
+pkgver=7.0
+pkgrel=2
 
 _winever=$pkgver
 _pkgbasever=${pkgver/rc/-rc}
 
-_wine_commit=03891654faf9271d81240faf9cd4f471ca5832f9
-_dxvk_commit=78ef4cfd92cb7f448292aaca83091914ab271257
-_vkd3d_commit=0251b4045c2f84df4defe751b52e1475b74f3337
+_wine_commit=df982e6865c2041ae994ee20ed2a2075ae7ddfb7
+_dxvk_commit=a72463c5afcb41d0b2f6459c87d396543053b983
+_vkd3d_commit=3e5aab6fb3e18f81a71b339be4cb5cdf55140980
 
 source=("$pkgname::git+https://github.com/ValveSoftware/wine.git#commit=$_wine_commit"
         "dxvk::git+https://github.com/ValveSoftware/dxvk.git#commit=$_dxvk_commit"
@@ -22,11 +22,8 @@ source=("$pkgname::git+https://github.com/ValveSoftware/wine.git#commit=$_wine_c
         30-win32-aliases.conf
         wine-binfmt.conf
         wine.inf-Remove-Steam-registry-entries.patch
-        appwiz.cpl-Fix-Mono-package-download.patch
-        wldap32-Update.patch
+        wineboot-Updating-prefix.patch
         dxdiag-Ignore-64bit-option.patch
-        ucrtbase-Implement-sincos.patch
-        msvcp90-Implement-sincos.patch
         widl-Ignore-option-pthread.patch
         wrc-Ignore-option-pthread.patch
         makefile-Proton-branding.patch)
@@ -35,15 +32,12 @@ sha512sums=('SKIP'
             'SKIP'
             '6e54ece7ec7022b3c9d94ad64bdf1017338da16c618966e8baf398e6f18f80f7b0576edf1d1da47ed77b96d577e4cbb2bb0156b0b11c183a0accf22654b0a2bb'
             'bdde7ae015d8a98ba55e84b86dc05aca1d4f8de85be7e4bd6187054bfe4ac83b5a20538945b63fb073caab78022141e9545685e4e3698c97ff173cf30859e285'
-            'ab5b7a5b075ec1e0774b8cd84a73b9169e4bad89df1d1747faeb51ce07d523c7c75f7388881e27afec047541b176280453ad91a7a6a335042673382b2019a7f4'
-            'b51010d26690cd0b5e8d1305434cf42a660ecf18dd35cc04c2f35e569435e519dbf0cdc3e955e765d670755d61bec776350f83e249b1a665328a6ed797812176'
-            '999f91d6912456023ded8210e9ff21b30178b17af05f4926f5e2739c48eb68ba3e7c22b34842ad1d2073ce7c56fc191c24c2fce5a09a16499afab0bf153a974e'
+            '31bdcf2c0db61f2bea1be52deeb939edc0dea615ac756560a329815dcb8cac1c1e2dcdd587b73f3bdc995bccd8b93f8179d55a1236414ffeb0e22eea413321ab'
+            '9ceab5380d1d11477aaa75107a3534fd554026d689c1d6bdc225bdf4aac24b72d030f7dcb95cf5c4701d58c721918a60e1c347255526f681f1475da85e74c7d9'
             '6b62ffdee725d78b7c36aa83843bb767fcd85470d4ea3ce2059d399fcfed6e67db7217df3a9faeca3ee2c676c2857f313177ab8be679b108d20fc188e0551f95'
-            '03d5854d3e85c861e3d9e1fbdb98130571eaac1f3483e3bb4a650cd2b0432d7d43a08ecd94ec1c9130db5bce27da06123731b37330abb5e77ef768619c89ca82'
-            'cc98004a23a28192067d3976abfb80db9598a5a094ec2457b69be4920f0320d9c9a2f1eecac6cce4f9e71f7000f5bd81274b403bfebfed90003a6b803fe7be6e'
-            '14d156e0c741f53717389a18dc513208022bf57b0ebc38723eac0f41d59581850ce8adc777c6f5a6ab6e490a24083251a804e01770fd71cefac187410dcb4bfc'
-            'debb94bf2a74afbe1b3c7f564c4dc2f25ac268bdedf7974c431943a1f63a59f9f90f861bc752736f21359a4cb40e526b238a973876f165ec09898d93d4c75415'
-            '2f7bcc1cd02e7166833b393004d984967f3a656df9f428a66a6c36b9c6f5cfd9203f8e4f4a7a2ba736b059e4999418e6ddb65a5b5b50b42fba253d05e04442c5')
+            'd5db3b4ef07c41e740d0ca384e1d088748b7d090ae3cd96dfd8b3f6b5d55d9c7952de30d12a5a5c4680cbb995a7ff66dd6a0b7246a7f3021c4aa72a7ee9adde5'
+            '996ef9b242787cfa0ca8aace46f35828246b5d6dfcaf8f0643454f7afe0db807364d74033d5d3ac562b8ad8e564c2aaae512161ed3bbcb01580b1b53d117aba5'
+            'e3a14db8a13edfe7f26d7b44df4b095a2895792a37bb169a30463e1cc1315bd87009a0438a8ca14f7d53c339fa55d10368cf7a201a673fb533027ce265cbd6b3')
 
 pkgdesc="A compatibility layer for running Windows programs - Proton branch"
 url="https://github.com/ValveSoftware/Proton"
@@ -149,19 +143,36 @@ prepare() {
     # git revert -n bc633e8c15139e66ccf7327e853b87ff9030fda0
 
     # fixup, user32: Use new export to set LD_PRELOAD
-    git revert -n 97f962cd469ee9b9b68d32e79849bf94cfe15581
-  
+    #git revert -n 97f962cd469ee9b9b68d32e79849bf94cfe15581
+
+
+    # ntdll: Add +microsecs channel for precise timestamps.
+    git revert -n c9dd827b315ba9394020ec65c161096ce3e968e8
+
     # ntdll: Write crash log when we are missing a module
-    git revert -n 4a38de8099c90692414eadf46007323e62cccd4d
-  
+    git revert -n ea71c1178d9a3827c6cf83bca8a124870174b3b2
+
+    # winebrowser: Restore original LD_LIBRARY_PATH before calling to system
+    git revert -n a1dde27690950aeb4728f0f3783b4d04d608b5c0
+
     # ntdll: Export a function to set a Unix environment variable.
-    git revert -n 12b4a3fb559cafd4b5fdb072dc4e2bb3aa1e95b1
-  
+    git revert -n bf6233be8f8b7c2e729daa91160dd41fbbb3c64e
+
+
     # dotnetfx35.exe: Add stub program.
     git revert -n 1f8552e34a897a751b3f5135db0559fed7424988
-  
+
+
+    # Instead of this revert block we'll revert by using patch
+    # wineboot: Generate better DigitalProductId.
+    # git revert -n 80d7c0c041636e900589e8ae41c5fdd3a0470b29
+
+    # explorer: Start tabtip process before the main loop.
+    # git revert -n 94ec0e4c7946445bfdc7df5405257e6f0a269876
+
     # HACK: wineboot: Don't show "updating prefix" window
-    git revert -n 285d64e7617ae31e3e03a6554404054cb5e9341f
+    # git revert -n 9a2d483b7fca2b92f3a5cf02a12b804a50edb87b
+
 
     # wine.inf: Associate the "steam" protocol with winebrowser.
     # git revert -n 0e40743b6d409bc2b669eac7ad6ce379be22fc17
@@ -185,8 +196,13 @@ prepare() {
     git revert -n 106fd7119b2d88dc4dece7b5058d73854a7aae2e
     #git revert -n 7b5266d81e153d0357122047386418d255d08650
 
+
+    # HACK: shell32: Preserve duplicated Documents/Stuff directories
+    git revert -n 762a8d7bd8e1027eae7222c23253726a08af9964
+
     # HACK: shell32: Never create links to the user's home dirs
-    git revert -n d3477cd06f80c3ababa4cff3133933ed815b9a48
+    git revert -n c3fadbbbeadb8fd49fb2edfd2ee4ca37a46cfbff
+
 
     # HACK: advapi32: Use steamuser as Wine username
     git revert -n 207d17259d8aed05d3b69d242c2bc68b02aec378
@@ -194,23 +210,36 @@ prepare() {
     # HACK: steam: kernelbase: Substitute the current pid for the Steam
     git revert -n 1519ba09129800fa81957d0986e2017fe7243ba9
 
+
+    #  HACK: proton: ntdll: Strip gameoverlayrenderer.so from LD_PRELOAD before executing explorer.exe.
+    git revert -n 901e614e8f3d8913e7f75ccd6cdbabbd0502c53f
+
+    # HACK: proton: ntdll: Export a function to set a Unix environment variable
+    git revert -n bf6233be8f8b7c2e729daa91160dd41fbbb3c64e
+
     # HACK: steam: ntdll: Patch entry points with jumps.
-    git revert -n 762405d42e29a60e6eb5620cbb6693c43777268f
+    git revert -n b25e4e6251675172321a561e1398874fd2dd0126
+
+    # ntdll: Properly parse UDF instruction in ARM.
+    git revert -n f5a95366d46ad3067e0f0316cdb83b4ed344de3d
+
+    # ntdll: Implement __fastfail().
+    git revert -n b3cfa8ce5544f1a10b2a9034e993dcf944478501
 
     # HACK: steam: ntdll: Setup steamclient trampolines to lsteamclient.
-    git revert -n 916c2d0af18314f57734c1a9344bb9b1b1f20fbd
+    git revert -n 6fa5dfc0bd079bd18e1f457b1e6ae0bcf7eb383d
+
+
+    patch -Rp1 < ../wineboot-Updating-prefix.patch
 
     patch -Np1 < ../wine.inf-Remove-Steam-registry-entries.patch
-    patch -Np1 < ../appwiz.cpl-Fix-Mono-package-download.patch
-    patch -Np1 < ../wldap32-Update.patch
     patch -Np1 < ../dxdiag-Ignore-64bit-option.patch
-    patch -Np1 < ../ucrtbase-Implement-sincos.patch
     patch -Np1 < ../widl-Ignore-option-pthread.patch
     patch -Np1 < ../wrc-Ignore-option-pthread.patch
-    patch -Np1 < ../msvcp90-Implement-sincos.patch
     
-    #autoreconf
+    autoreconf
     tools/make_requests
+    dlls/winevulkan/make_vulkan
   popd
 
   pushd vkd3d-proton
@@ -272,6 +301,7 @@ build() {
     --prefix=/usr \
     --with-x \
     --with-gstreamer \
+    --without-ldap \
     --libdir=/usr/lib32 \
     --with-wine64="$srcdir/$pkgname-64-build" \
     --disable-tests
@@ -321,7 +351,7 @@ package() {
   msg2 "Packaging DXVK-32..."
   cd "$srcdir/dxvk-32-build/bin"
   rm -f "$pkgdir/usr/lib32/wine/dxgi.dll.so"
-  for dll in d3d9 d3d10core d3d11 dxgi dxvk_config; do
+  for dll in d3d9 d3d10core d3d11 dxgi; do
     rm -f "$pkgdir/usr/lib32/wine/$dll.dll"
     $srcdir/$pkgname-64-build/tools/winebuild/winebuild --builtin $dll.dll
     cp $dll.dll "$pkgdir/usr/lib32/wine/$dll.dll"
@@ -343,7 +373,7 @@ package() {
   msg2 "Packaging DXVK-64..."
   cd "$srcdir/dxvk-64-build/bin"
   rm -f "$pkgdir/usr/lib/wine/dxgi.dll.so"
-  for dll in d3d9 d3d10core d3d11 dxgi dxvk_config; do
+  for dll in d3d9 d3d10core d3d11 dxgi; do
     rm -f "$pkgdir/usr/lib/wine/$dll.dll"
     $srcdir/$pkgname-64-build/tools/winebuild/winebuild --builtin $dll.dll
     cp $dll.dll "$pkgdir/usr/lib/wine/$dll.dll"

@@ -1,12 +1,12 @@
 diff -purN a/Makefile b/Makefile
---- a/Makefile	2021-07-27 13:15:15.508205146 +0300
-+++ b/Makefile	2021-08-18 12:27:33.927144096 +0300
-@@ -1820,7 +1820,7 @@ install-manpages:: manpages
- # Rules for generated source files
- 
+--- a/Makefile	2022-04-22 00:18:36.379751453 +0300
++++ b/Makefile	2022-04-22 00:25:16.165749639 +0300
+@@ -1955,7 +1955,7 @@ distclean:: clean
+ install-manpages:: manpages
+ 	for i in documentation/man$(api_manext)/*.$(api_manext); do ../wine-proton/tools/install-sh -m 644 $(INSTALL_DATA_FLAGS) $$i $(DESTDIR)$(mandir)/$$i; done
  dlls/ntdll/unix/version.c: dummy
--	@version=`(GIT_DIR=$(srcdir)/.git git describe HEAD 2>/dev/null || echo "wine-$(PACKAGE_VERSION)") | sed -n -e '$$s/\(.*\)/const char wine_build[] = "\1";/p'` && (echo $$version | cmp -s - $@) || echo $$version >$@ || ($(RM) $@ && exit 1)
+-	@version=`(GIT_DIR=../wine-proton/.git git describe HEAD 2>/dev/null || echo "wine-$(PACKAGE_VERSION)") | sed -n -e '$$s/\(.*\)/const char wine_build[] = "\1";/p'` && (echo $$version | cmp -s - $@) || echo $$version >$@ || (rm -f $@ && exit 1)
 +	@version=`echo "wine-$(PACKAGE_VERSION)" | sed -n -e '$$s/\(.*\)/const char wine_build[] = "\1 (Proton)";/p'` && (echo $$version | cmp -s - $@) || echo $$version >$@ || ($(RM) $@ && exit 1)
- 
  programs/winetest/build.rc: dummy
- 	@build="STRINGTABLE { 1 \"`GIT_DIR=$(srcdir)/.git git rev-parse HEAD 2>/dev/null`\" }" && (echo $$build | cmp -s - $@) || echo $$build >$@ || (rm -f $@ && exit 1)
+ 	@build="STRINGTABLE { 1 \"`GIT_DIR=../wine-proton/.git git rev-parse HEAD 2>/dev/null`\" }" && (echo $$build | cmp -s - $@) || echo $$build >$@ || (rm -f $@ && exit 1)
+ programs/winetest/build.nfo:
