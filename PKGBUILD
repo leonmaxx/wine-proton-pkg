@@ -7,14 +7,14 @@
 
 pkgname=wine-proton
 pkgver=7.0
-pkgrel=2
+pkgrel=4
 
 _winever=$pkgver
 _pkgbasever=${pkgver/rc/-rc}
 
-_wine_commit=df982e6865c2041ae994ee20ed2a2075ae7ddfb7
-_dxvk_commit=a72463c5afcb41d0b2f6459c87d396543053b983
-_vkd3d_commit=3e5aab6fb3e18f81a71b339be4cb5cdf55140980
+_wine_commit=fb6e6af8928a29660e8cf797d43e028ea5bf8d23
+_dxvk_commit=e4fd5e9e8d335e8a2c0814829207cbd421f7e40e
+_vkd3d_commit=c05900da4d55e26a038b37a664fff8bb233d0ad2
 
 source=("$pkgname::git+https://github.com/ValveSoftware/wine.git#commit=$_wine_commit"
         "dxvk::git+https://github.com/ValveSoftware/dxvk.git#commit=$_dxvk_commit"
