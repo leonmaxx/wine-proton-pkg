@@ -7,7 +7,7 @@
 
 pkgname=wine-proton
 pkgver=7.0
-pkgrel=4
+pkgrel=4.1
 
 _winever=$pkgver
 _pkgbasever=${pkgver/rc/-rc}
@@ -350,18 +350,20 @@ package() {
 
   msg2 "Packaging DXVK-32..."
   cd "$srcdir/dxvk-32-build/bin"
-  rm -f "$pkgdir/usr/lib32/wine/dxgi.dll.so"
+  #rm -f "$pkgdir/usr/lib32/wine/dxgi.dll.so"
   for dll in d3d9 d3d10core d3d11 dxgi; do
-    rm -f "$pkgdir/usr/lib32/wine/$dll.dll"
+    rm -f "$pkgdir/usr/lib32/wine/i386-unix/$dll.dll.so"
+    rm -f "$pkgdir/usr/lib32/wine/i386-windows/$dll.dll"
     $srcdir/$pkgname-64-build/tools/winebuild/winebuild --builtin $dll.dll
-    cp $dll.dll "$pkgdir/usr/lib32/wine/$dll.dll"
+    cp $dll.dll "$pkgdir/usr/lib32/wine/i386-windows/$dll.dll"
   done
 
   msg2 "Packaging VKD3D-32..."
   cd "$srcdir/vkd3d-32-build/bin"
-  rm -f "$pkgdir/usr/lib32/wine/d3d12.dll.so"
+  rm -f "$pkgdir/usr/lib32/wine/i386-unix/d3d12.dll.so"
+  rm -f "$pkgdir/usr/lib32/wine/i386-windows/d3d12.dll"
   $srcdir/$pkgname-64-build/tools/winebuild/winebuild --builtin d3d12.dll
-  cp d3d12.dll "$pkgdir/usr/lib32/wine/d3d12.dll"
+  cp d3d12.dll "$pkgdir/usr/lib32/wine/i386-windows/d3d12.dll"
 
 
   msg2 "Packaging Wine-64..."
@@ -372,18 +374,20 @@ package() {
 
   msg2 "Packaging DXVK-64..."
   cd "$srcdir/dxvk-64-build/bin"
-  rm -f "$pkgdir/usr/lib/wine/dxgi.dll.so"
+  #rm -f "$pkgdir/usr/lib/wine/dxgi.dll.so"
   for dll in d3d9 d3d10core d3d11 dxgi; do
-    rm -f "$pkgdir/usr/lib/wine/$dll.dll"
+    rm -f "$pkgdir/usr/lib/wine/x86_64-unix/$dll.dll.so"
+    rm -f "$pkgdir/usr/lib/wine/x86_64-windows/$dll.dll"
     $srcdir/$pkgname-64-build/tools/winebuild/winebuild --builtin $dll.dll
-    cp $dll.dll "$pkgdir/usr/lib/wine/$dll.dll"
+    cp $dll.dll "$pkgdir/usr/lib/wine/x86_64-windows/$dll.dll"
   done
 
   msg2 "Packaging VKD3D-64..."
   cd "$srcdir/vkd3d-64-build/bin"
-  rm -f "$pkgdir/usr/lib/wine/d3d12.dll.so"
+  rm -f "$pkgdir/usr/lib/wine/x86_64-unix/d3d12.dll.so"
+  rm -f "$pkgdir/usr/lib/wine/x86_64-windows/d3d12.dll"
   $srcdir/$pkgname-64-build/tools/winebuild/winebuild --builtin d3d12.dll
-  cp d3d12.dll "$pkgdir/usr/lib/wine/d3d12.dll"
+  cp d3d12.dll "$pkgdir/usr/lib/wine/x86_64-windows/d3d12.dll"
 
 
   # Font aliasing settings for Win32 applications
@@ -392,8 +396,8 @@ package() {
   ln -s ../conf.avail/30-win32-aliases.conf "$pkgdir/etc/fonts/conf.d/30-win32-aliases.conf"
   install -Dm 644 "$srcdir/wine-binfmt.conf" "$pkgdir/usr/lib/binfmt.d/wine.conf"
 
-  i686-w64-mingw32-strip --strip-unneeded "$pkgdir"/usr/lib32/wine/*.dll
-  x86_64-w64-mingw32-strip --strip-unneeded "$pkgdir"/usr/lib/wine/*.dll
+  i686-w64-mingw32-strip --strip-unneeded "$pkgdir"/usr/lib32/wine/i386-windows/*.dll
+  x86_64-w64-mingw32-strip --strip-unneeded "$pkgdir"/usr/lib/wine/x86_64-windows/*.dll
 }
 
 # vim:set ts=8 sts=2 sw=2 et:
