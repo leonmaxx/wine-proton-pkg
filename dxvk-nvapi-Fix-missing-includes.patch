@@ -1,0 +1,14 @@
+diff -purN a/src/nvapi_private.h b/src/nvapi_private.h
+--- a/src/nvapi_private.h	2022-10-07 21:10:16.066961600 +0300
++++ b/src/nvapi_private.h	2022-10-07 21:31:24.952288589 +0300
+@@ -12,6 +12,10 @@
+ #include <fstream>
+ #include <ctime>
+ #include <mutex>
++#include <memory>
++#include <vector>
++#include <unordered_map>
++#include <utility>
+ 
+ #include <dxgi.h>
+ #include <d3d11_1.h>

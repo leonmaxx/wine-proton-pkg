@@ -5,9 +5,10 @@
 # Contributor: Eduardo Romero <eduardo@archlinux.org>
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
-pkgname=wine-proton
+pkgname=('wine-proton' 'wine-proton-nvapi')
+pkgbase=wine-proton
 pkgver=7.0
-pkgrel=4.1
+pkgrel=4.2
 
 _winever=$pkgver
 _pkgbasever=${pkgver/rc/-rc}
@@ -15,19 +16,23 @@ _pkgbasever=${pkgver/rc/-rc}
 _wine_commit=fb6e6af8928a29660e8cf797d43e028ea5bf8d23
 _dxvk_commit=e4fd5e9e8d335e8a2c0814829207cbd421f7e40e
 _vkd3d_commit=c05900da4d55e26a038b37a664fff8bb233d0ad2
+_nvapi_commit=ac312ac21bb1ca108a149849adba9fd1c77e3a9d
 
-source=("$pkgname::git+https://github.com/ValveSoftware/wine.git#commit=$_wine_commit"
+source=("$pkgbase::git+https://github.com/ValveSoftware/wine.git#commit=$_wine_commit"
         "dxvk::git+https://github.com/ValveSoftware/dxvk.git#commit=$_dxvk_commit"
         "vkd3d-proton::git+https://github.com/HansKristian-Work/vkd3d-proton.git#commit=$_vkd3d_commit"
+        "dxvk-nvapi::git+https://github.com/jp7677/dxvk-nvapi.git#commit=$_nvapi_commit"
         30-win32-aliases.conf
         wine-binfmt.conf
         wine.inf-Remove-Steam-registry-entries.patch
         wineboot-Updating-prefix.patch
         dxdiag-Ignore-64bit-option.patch
+        dxvk-nvapi-Fix-missing-includes.patch
         widl-Ignore-option-pthread.patch
         wrc-Ignore-option-pthread.patch
         makefile-Proton-branding.patch)
 sha512sums=('SKIP'
+            'SKIP'
             'SKIP'
             'SKIP'
             '6e54ece7ec7022b3c9d94ad64bdf1017338da16c618966e8baf398e6f18f80f7b0576edf1d1da47ed77b96d577e4cbb2bb0156b0b11c183a0accf22654b0a2bb'
@@ -35,6 +40,7 @@ sha512sums=('SKIP'
             '31bdcf2c0db61f2bea1be52deeb939edc0dea615ac756560a329815dcb8cac1c1e2dcdd587b73f3bdc995bccd8b93f8179d55a1236414ffeb0e22eea413321ab'
             '9ceab5380d1d11477aaa75107a3534fd554026d689c1d6bdc225bdf4aac24b72d030f7dcb95cf5c4701d58c721918a60e1c347255526f681f1475da85e74c7d9'
             '6b62ffdee725d78b7c36aa83843bb767fcd85470d4ea3ce2059d399fcfed6e67db7217df3a9faeca3ee2c676c2857f313177ab8be679b108d20fc188e0551f95'
+            '05826f7f3f29ce6da08d0c632a17e9268fee0ba484e85f0d41cdbaac9e2a6a09e23ebc29ffb3d1b6b3a8fe89db16013c8f161ad22121fb6ae07c82c9f681746c'
             'd5db3b4ef07c41e740d0ca384e1d088748b7d090ae3cd96dfd8b3f6b5d55d9c7952de30d12a5a5c4680cbb995a7ff66dd6a0b7246a7f3021c4aa72a7ee9adde5'
             '996ef9b242787cfa0ca8aace46f35828246b5d6dfcaf8f0643454f7afe0db807364d74033d5d3ac562b8ad8e564c2aaae512161ed3bbcb01580b1b53d117aba5'
             'e3a14db8a13edfe7f26d7b44df4b095a2895792a37bb169a30463e1cc1315bd87009a0438a8ca14f7d53c339fa55d10368cf7a201a673fb533027ce265cbd6b3')
@@ -99,6 +105,7 @@ makedepends=(autoconf ncurses bison perl fontforge flex mingw-w64-gcc
 )
 
 optdepends=(
+  wine-proton-nvapi
   giflib                lib32-giflib
   libpng                lib32-libpng
   libldap               lib32-libldap
@@ -135,10 +142,10 @@ install=wine.install
 
 prepare() {
   # Revert unneeded Wine-Proton patches
-  pushd $pkgname
+  pushd $pkgbase
     # wine.inf: Don't use DDE for winebrowser by default. 
     # git revert -n 2729328ac86bf14706006b0de54431f753a0c14c
-  
+
     # wine.inf: Associate the steam protocol with steam.exe.
     # git revert -n bc633e8c15139e66ccf7327e853b87ff9030fda0
 
@@ -236,7 +243,7 @@ prepare() {
     patch -Np1 < ../dxdiag-Ignore-64bit-option.patch
     patch -Np1 < ../widl-Ignore-option-pthread.patch
     patch -Np1 < ../wrc-Ignore-option-pthread.patch
-    
+
     autoreconf
     tools/make_requests
     dlls/winevulkan/make_vulkan
@@ -245,7 +252,12 @@ prepare() {
   pushd vkd3d-proton
     git submodule update --init --recursive
   popd
-  
+
+  pushd dxvk-nvapi
+    git submodule update --init --recursive
+    patch -Np1 < ../dxvk-nvapi-Fix-missing-includes.patch
+  popd
+
   # Doesn't compile without remove these flags as of 4.10
   export CFLAGS="${CFLAGS/-fno-plt/}"
   export CXXFLAGS="${CXXFLAGS/-fno-plt/}"
@@ -262,18 +274,21 @@ prepare() {
   export CFLAGS="${CFLAGS/-fcf-protection/}"
   export CXXFLAGS="${CXXFLAGS/-fstack-clash-protection/}"
   export CXXFLAGS="${CXXFLAGS/-fcf-protection/}"
-  
-  sed 's|OpenCL/opencl.h|CL/opencl.h|g' -i $pkgname/configure*
+
+  sed 's|OpenCL/opencl.h|CL/opencl.h|g' -i $pkgbase/configure*
 
   # Get rid of old build dirs
-  rm -rf $pkgname-{32,64}-build
-  mkdir $pkgname-{32,64}-build
+  rm -rf $pkgbase-{32,64}-build
+  mkdir $pkgbase-{32,64}-build
 
   rm -rf dxvk-{32,64}-build
   mkdir dxvk-{32,64}-build
 
   rm -rf vkd3d-{32,64}-build
   mkdir vkd3d-{32,64}-build
+
+  rm -rf dxvk-nvapi-{32,64}-build
+  mkdir dxvk-nvapi-{32,64}-build
 }
 
 build() {
@@ -281,8 +296,8 @@ build() {
 
   msg2 "Building Wine-64..."
 
-  cd "$srcdir/$pkgname-64-build"
-  ../$pkgname/configure \
+  cd "$srcdir/$pkgbase-64-build"
+  ../$pkgbase/configure \
     --prefix=/usr \
     --libdir=/usr/lib \
     --with-x \
@@ -296,14 +311,14 @@ build() {
   msg2 "Building Wine-32..."
 
   export PKG_CONFIG_PATH="/usr/lib32/pkgconfig"
-  cd "$srcdir/$pkgname-32-build"
-  ../$pkgname/configure \
+  cd "$srcdir/$pkgbase-32-build"
+  ../$pkgbase/configure \
     --prefix=/usr \
     --with-x \
     --with-gstreamer \
     --without-ldap \
     --libdir=/usr/lib32 \
-    --with-wine64="$srcdir/$pkgname-64-build" \
+    --with-wine64="$srcdir/$pkgbase-64-build" \
     --disable-tests
 
   patch -p1 < ../makefile-Proton-branding.patch
@@ -321,7 +336,6 @@ build() {
 
   msg2 "Building DXVK-64..."
 
-  cd "$srcdir/dxvk"
   meson --cross-file build-win64.txt --buildtype release --prefix "$srcdir/dxvk-64-build" build.w64
   ninja -C build.w64 install
 
@@ -333,16 +347,25 @@ build() {
 
   msg2 "Building VKD3D-64..."
 
-  cd "$srcdir/vkd3d-proton"
   meson --cross-file build-win64.txt --buildtype release --prefix "$srcdir/vkd3d-64-build" build.w64
   ninja -C build.w64 install
 
+  msg2 "Building DXVK-NVAPI-32..."
+
+  cd "$srcdir/dxvk-nvapi"
+  meson --cross-file build-win32.txt --buildtype release --prefix "$srcdir/dxvk-nvapi-32-build" build.w32
+  ninja -C build.w32 install
+
+  msg2 "Building DXVK-NVAPI-64..."
+
+  meson --cross-file build-win64.txt --buildtype release --prefix "$srcdir/dxvk-nvapi-64-build" build.w64
+  ninja -C build.w64 install
 }
 
 
-package() {
+package_wine-proton() {
   msg2 "Packaging Wine-32..."
-  cd "$srcdir/$pkgname-32-build"
+  cd "$srcdir/$pkgbase-32-build"
 
   make prefix="$pkgdir/usr" \
     libdir="$pkgdir/usr/lib32" \
@@ -350,11 +373,10 @@ package() {
 
   msg2 "Packaging DXVK-32..."
   cd "$srcdir/dxvk-32-build/bin"
-  #rm -f "$pkgdir/usr/lib32/wine/dxgi.dll.so"
   for dll in d3d9 d3d10core d3d11 dxgi; do
     rm -f "$pkgdir/usr/lib32/wine/i386-unix/$dll.dll.so"
     rm -f "$pkgdir/usr/lib32/wine/i386-windows/$dll.dll"
-    $srcdir/$pkgname-64-build/tools/winebuild/winebuild --builtin $dll.dll
+    $srcdir/$pkgbase-64-build/tools/winebuild/winebuild --builtin $dll.dll
     cp $dll.dll "$pkgdir/usr/lib32/wine/i386-windows/$dll.dll"
   done
 
@@ -362,23 +384,22 @@ package() {
   cd "$srcdir/vkd3d-32-build/bin"
   rm -f "$pkgdir/usr/lib32/wine/i386-unix/d3d12.dll.so"
   rm -f "$pkgdir/usr/lib32/wine/i386-windows/d3d12.dll"
-  $srcdir/$pkgname-64-build/tools/winebuild/winebuild --builtin d3d12.dll
+  $srcdir/$pkgbase-64-build/tools/winebuild/winebuild --builtin d3d12.dll
   cp d3d12.dll "$pkgdir/usr/lib32/wine/i386-windows/d3d12.dll"
 
 
   msg2 "Packaging Wine-64..."
-  cd "$srcdir/$pkgname-64-build"
+  cd "$srcdir/$pkgbase-64-build"
   make prefix="$pkgdir/usr" \
     libdir="$pkgdir/usr/lib" \
     dlldir="$pkgdir/usr/lib/wine" install
 
   msg2 "Packaging DXVK-64..."
   cd "$srcdir/dxvk-64-build/bin"
-  #rm -f "$pkgdir/usr/lib/wine/dxgi.dll.so"
   for dll in d3d9 d3d10core d3d11 dxgi; do
     rm -f "$pkgdir/usr/lib/wine/x86_64-unix/$dll.dll.so"
     rm -f "$pkgdir/usr/lib/wine/x86_64-windows/$dll.dll"
-    $srcdir/$pkgname-64-build/tools/winebuild/winebuild --builtin $dll.dll
+    $srcdir/$pkgbase-64-build/tools/winebuild/winebuild --builtin $dll.dll
     cp $dll.dll "$pkgdir/usr/lib/wine/x86_64-windows/$dll.dll"
   done
 
@@ -386,9 +407,13 @@ package() {
   cd "$srcdir/vkd3d-64-build/bin"
   rm -f "$pkgdir/usr/lib/wine/x86_64-unix/d3d12.dll.so"
   rm -f "$pkgdir/usr/lib/wine/x86_64-windows/d3d12.dll"
-  $srcdir/$pkgname-64-build/tools/winebuild/winebuild --builtin d3d12.dll
+  $srcdir/$pkgbase-64-build/tools/winebuild/winebuild --builtin d3d12.dll
   cp d3d12.dll "$pkgdir/usr/lib/wine/x86_64-windows/d3d12.dll"
 
+  rm -f "$pkgdir/usr/lib32/wine/i386-unix/nvapi.dll.so"
+  rm -f "$pkgdir/usr/lib32/wine/i386-windows/nvapi.dll"
+  rm -f "$pkgdir/usr/lib/wine/x86_64-unix/nvapi64.dll.so"
+  rm -f "$pkgdir/usr/lib/wine/x86_64-windows/nvapi64.dll"
 
   # Font aliasing settings for Win32 applications
   install -d "$pkgdir"/etc/fonts/conf.{avail,d}
@@ -398,6 +423,26 @@ package() {
 
   i686-w64-mingw32-strip --strip-unneeded "$pkgdir"/usr/lib32/wine/i386-windows/*.dll
   x86_64-w64-mingw32-strip --strip-unneeded "$pkgdir"/usr/lib/wine/x86_64-windows/*.dll
+}
+
+package_wine-proton-nvapi() {
+  pkgdesc="NVAPI implementation on top of DXVK - Proton branch"
+
+  mkdir -p "$pkgdir/usr/lib32/wine/i386-windows"
+  mkdir -p "$pkgdir/usr/lib/wine/x86_64-windows"
+
+  msg2 "Packaging DXVK-NVAPI-32..."
+  cd "$srcdir/dxvk-nvapi-32-build/bin"
+  $srcdir/$pkgbase-64-build/tools/winebuild/winebuild --builtin nvapi.dll
+  cp nvapi.dll "$pkgdir/usr/lib32/wine/i386-windows/nvapi.dll"
+
+  msg2 "Packaging DXVK-NVAPI-64..."
+  cd "$srcdir/dxvk-nvapi-64-build/bin"
+  $srcdir/$pkgbase-64-build/tools/winebuild/winebuild --builtin nvapi64.dll
+  cp nvapi64.dll "$pkgdir/usr/lib/wine/x86_64-windows/nvapi64.dll"
+
+  i686-w64-mingw32-strip --strip-unneeded "$pkgdir"/usr/lib32/wine/i386-windows/nvapi.dll
+  x86_64-w64-mingw32-strip --strip-unneeded "$pkgdir"/usr/lib/wine/x86_64-windows/nvapi64.dll
 }
 
 # vim:set ts=8 sts=2 sw=2 et:
