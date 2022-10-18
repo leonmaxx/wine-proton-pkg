@@ -8,7 +8,7 @@
 pkgname=('wine-proton' 'wine-proton-nvapi')
 pkgbase=wine-proton
 pkgver=7.0
-pkgrel=4.2
+pkgrel=4.3
 
 _winever=$pkgver
 _pkgbasever=${pkgver/rc/-rc}
@@ -28,6 +28,7 @@ source=("$pkgbase::git+https://github.com/ValveSoftware/wine.git#commit=$_wine_c
         wineboot-Updating-prefix.patch
         dxdiag-Ignore-64bit-option.patch
         dxvk-nvapi-Fix-missing-includes.patch
+        winevulkan-FSHack-AMD-FSRv1.patch
         widl-Ignore-option-pthread.patch
         wrc-Ignore-option-pthread.patch
         makefile-Proton-branding.patch)
@@ -41,6 +42,7 @@ sha512sums=('SKIP'
             '9ceab5380d1d11477aaa75107a3534fd554026d689c1d6bdc225bdf4aac24b72d030f7dcb95cf5c4701d58c721918a60e1c347255526f681f1475da85e74c7d9'
             '6b62ffdee725d78b7c36aa83843bb767fcd85470d4ea3ce2059d399fcfed6e67db7217df3a9faeca3ee2c676c2857f313177ab8be679b108d20fc188e0551f95'
             '05826f7f3f29ce6da08d0c632a17e9268fee0ba484e85f0d41cdbaac9e2a6a09e23ebc29ffb3d1b6b3a8fe89db16013c8f161ad22121fb6ae07c82c9f681746c'
+            '6f58bfcd9b43f61b70416ceb05a32e58fef0f36f166f86311be6673e54a32419b570bad58654c77a71be0ac5eaf999a8ccdee8e89087cb4c97de0e7c6078717c'
             'd5db3b4ef07c41e740d0ca384e1d088748b7d090ae3cd96dfd8b3f6b5d55d9c7952de30d12a5a5c4680cbb995a7ff66dd6a0b7246a7f3021c4aa72a7ee9adde5'
             '996ef9b242787cfa0ca8aace46f35828246b5d6dfcaf8f0643454f7afe0db807364d74033d5d3ac562b8ad8e564c2aaae512161ed3bbcb01580b1b53d117aba5'
             'e3a14db8a13edfe7f26d7b44df4b095a2895792a37bb169a30463e1cc1315bd87009a0438a8ca14f7d53c339fa55d10368cf7a201a673fb533027ce265cbd6b3')
@@ -138,7 +140,6 @@ optdepends=(
 
 provides=("wine=$pkgver" "wine-wow64=$pkgver" "wine-staging=$pkgver")
 conflicts=('wine' 'wine-wow64' 'wine-staging')
-install=wine.install
 
 prepare() {
   # Revert unneeded Wine-Proton patches
@@ -238,6 +239,8 @@ prepare() {
 
 
     patch -Rp1 < ../wineboot-Updating-prefix.patch
+
+    patch -Np1 < ../winevulkan-FSHack-AMD-FSRv1.patch
 
     patch -Np1 < ../wine.inf-Remove-Steam-registry-entries.patch
     patch -Np1 < ../dxdiag-Ignore-64bit-option.patch
@@ -364,6 +367,8 @@ build() {
 
 
 package_wine-proton() {
+  install=wine.install
+
   msg2 "Packaging Wine-32..."
   cd "$srcdir/$pkgbase-32-build"
 
@@ -427,6 +432,10 @@ package_wine-proton() {
 
 package_wine-proton-nvapi() {
   pkgdesc="NVAPI implementation on top of DXVK - Proton branch"
+  depends=(wine-proton)
+  optdepends=(nvidia-utils lib32-nvidia-utils)
+  provides=()
+  conflicts=()
 
   mkdir -p "$pkgdir/usr/lib32/wine/i386-windows"
   mkdir -p "$pkgdir/usr/lib/wine/x86_64-windows"
