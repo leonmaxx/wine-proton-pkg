@@ -1,0 +1,22 @@
+diff -purN a/build-win32.txt b/build-win32.txt
+--- a/build-win32.txt	2023-04-26 22:17:34.345188755 +0300
++++ b/build-win32.txt	2023-05-01 19:11:35.094632725 +0300
+@@ -3,7 +3,6 @@ c = 'i686-w64-mingw32-gcc'
+ cpp = 'i686-w64-mingw32-g++'
+ ar = 'i686-w64-mingw32-ar'
+ strip = 'i686-w64-mingw32-strip'
+-widl = 'i686-w64-mingw32-widl'
+ 
+ [properties]
+ c_args=['-msse', '-msse2']
+diff -purN a/build-win64.txt b/build-win64.txt
+--- a/build-win64.txt	2023-04-26 22:17:34.345188755 +0300
++++ b/build-win64.txt	2023-05-01 19:11:42.637996847 +0300
+@@ -3,7 +3,6 @@ c = 'x86_64-w64-mingw32-gcc'
+ cpp = 'x86_64-w64-mingw32-g++'
+ ar = 'x86_64-w64-mingw32-ar'
+ strip = 'x86_64-w64-mingw32-strip'
+-widl = 'x86_64-w64-mingw32-widl'
+ 
+ [properties]
+ c_link_args = ['-static', '-static-libgcc']

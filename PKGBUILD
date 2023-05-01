@@ -7,16 +7,16 @@
 
 pkgname=('wine-proton' 'wine-proton-nvapi')
 pkgbase=wine-proton
-pkgver=7.0
-pkgrel=4.3
+pkgver=8.0
+pkgrel=1
 
 _winever=$pkgver
 _pkgbasever=${pkgver/rc/-rc}
 
-_wine_commit=fb6e6af8928a29660e8cf797d43e028ea5bf8d23
-_dxvk_commit=e4fd5e9e8d335e8a2c0814829207cbd421f7e40e
-_vkd3d_commit=c05900da4d55e26a038b37a664fff8bb233d0ad2
-_nvapi_commit=ac312ac21bb1ca108a149849adba9fd1c77e3a9d
+_wine_commit=0913f492ebf4fefca70e6cab3b01f442c599732e
+_dxvk_commit=caf31033d711460e86781b16a4d9b0f41fa9e817
+_vkd3d_commit=08909d98565065994612e529feb0cad04e498a8e
+_nvapi_commit=80397ea5c3ed895d7094fe7e3c93f811650bb531
 
 source=("$pkgbase::git+https://github.com/ValveSoftware/wine.git#commit=$_wine_commit"
         "dxvk::git+https://github.com/ValveSoftware/dxvk.git#commit=$_dxvk_commit"
@@ -25,10 +25,12 @@ source=("$pkgbase::git+https://github.com/ValveSoftware/wine.git#commit=$_wine_c
         30-win32-aliases.conf
         wine-binfmt.conf
         wine.inf-Remove-Steam-registry-entries.patch
+        ntdll-Remove-trampolines-for-lsteamclient.patch
         wineboot-Updating-prefix.patch
         dxdiag-Ignore-64bit-option.patch
         dxvk-nvapi-Fix-missing-includes.patch
         winevulkan-FSHack-AMD-FSRv1.patch
+        vkd3d-Use-default-widl.patch
         widl-Ignore-option-pthread.patch
         wrc-Ignore-option-pthread.patch
         makefile-Proton-branding.patch)
@@ -39,10 +41,12 @@ sha512sums=('SKIP'
             '6e54ece7ec7022b3c9d94ad64bdf1017338da16c618966e8baf398e6f18f80f7b0576edf1d1da47ed77b96d577e4cbb2bb0156b0b11c183a0accf22654b0a2bb'
             'bdde7ae015d8a98ba55e84b86dc05aca1d4f8de85be7e4bd6187054bfe4ac83b5a20538945b63fb073caab78022141e9545685e4e3698c97ff173cf30859e285'
             '31bdcf2c0db61f2bea1be52deeb939edc0dea615ac756560a329815dcb8cac1c1e2dcdd587b73f3bdc995bccd8b93f8179d55a1236414ffeb0e22eea413321ab'
+            '8accccce50e5bda488085c8d8eaefd10c0e2a2f1117eeb1c0191f9c30c245ff56d1a8d0bd2cfa65d885200be8608debcee92a6439e689d00a2a7b62699091f45'
             '9ceab5380d1d11477aaa75107a3534fd554026d689c1d6bdc225bdf4aac24b72d030f7dcb95cf5c4701d58c721918a60e1c347255526f681f1475da85e74c7d9'
             '6b62ffdee725d78b7c36aa83843bb767fcd85470d4ea3ce2059d399fcfed6e67db7217df3a9faeca3ee2c676c2857f313177ab8be679b108d20fc188e0551f95'
             '05826f7f3f29ce6da08d0c632a17e9268fee0ba484e85f0d41cdbaac9e2a6a09e23ebc29ffb3d1b6b3a8fe89db16013c8f161ad22121fb6ae07c82c9f681746c'
             '6f58bfcd9b43f61b70416ceb05a32e58fef0f36f166f86311be6673e54a32419b570bad58654c77a71be0ac5eaf999a8ccdee8e89087cb4c97de0e7c6078717c'
+            '72fa37279cc2feca630dbe2de55eba638c55bc2d6636c21254c8eb9155d3cfd371f11be6b1967bb5359214d7568c98f6387d29d55eccc674c7486e47f94fac47'
             'd5db3b4ef07c41e740d0ca384e1d088748b7d090ae3cd96dfd8b3f6b5d55d9c7952de30d12a5a5c4680cbb995a7ff66dd6a0b7246a7f3021c4aa72a7ee9adde5'
             '996ef9b242787cfa0ca8aace46f35828246b5d6dfcaf8f0643454f7afe0db807364d74033d5d3ac562b8ad8e564c2aaae512161ed3bbcb01580b1b53d117aba5'
             'e3a14db8a13edfe7f26d7b44df4b095a2895792a37bb169a30463e1cc1315bd87009a0438a8ca14f7d53c339fa55d10368cf7a201a673fb533027ce265cbd6b3')
@@ -155,20 +159,20 @@ prepare() {
 
 
     # ntdll: Add +microsecs channel for precise timestamps.
-    git revert -n c9dd827b315ba9394020ec65c161096ce3e968e8
+    #git revert -n c9dd827b315ba9394020ec65c161096ce3e968e8
 
     # ntdll: Write crash log when we are missing a module
-    git revert -n ea71c1178d9a3827c6cf83bca8a124870174b3b2
+    #git revert -n ea71c1178d9a3827c6cf83bca8a124870174b3b2
 
     # winebrowser: Restore original LD_LIBRARY_PATH before calling to system
-    git revert -n a1dde27690950aeb4728f0f3783b4d04d608b5c0
+    #git revert -n a1dde27690950aeb4728f0f3783b4d04d608b5c0
 
     # ntdll: Export a function to set a Unix environment variable.
-    git revert -n bf6233be8f8b7c2e729daa91160dd41fbbb3c64e
+    #git revert -n bf6233be8f8b7c2e729daa91160dd41fbbb3c64e
 
 
     # dotnetfx35.exe: Add stub program.
-    git revert -n 1f8552e34a897a751b3f5135db0559fed7424988
+    git revert -n 3a98b9cc1dc8bdb17b8fb32b509d237c46d5dc35
 
 
     # Instead of this revert block we'll revert by using patch
@@ -192,13 +196,14 @@ prepare() {
     git revert -n 1c42b167834b5b917f3ab1f4ae12110047529402
 
     # HACK: Don't build winemenubuilder
-    git revert -n 6f51cddc7717e269621e515e8e2e8afed49a2fa1
+    git revert -n 5e25ae85bf50673ec63a8437a7e77fe13dba97aa
 
     # HACK: mshtml: Don't install wine-gecko on prefix creation
     git revert -n 903a5167a20f744b58b1e94bd111a3892b42653d
 
     # Font related
-    git revert -n 2974307b5063c26283bf177a2dd823d1972af216
+    git revert -n fe7901be6de96a7572fff977dd34584d96b5ec29
+    git revert -n ba3c43eb34cd10b7cf1c8e76319a2eef86f31f8b
     git revert -n bf82f60052320c5c4396fa81a952fc243e03dd79
     git revert -n 9dbcb3b5f845e5f31093677804b0eada1bdc25b8
     git revert -n 106fd7119b2d88dc4dece7b5058d73854a7aae2e
@@ -220,27 +225,28 @@ prepare() {
 
 
     #  HACK: proton: ntdll: Strip gameoverlayrenderer.so from LD_PRELOAD before executing explorer.exe.
-    git revert -n 901e614e8f3d8913e7f75ccd6cdbabbd0502c53f
+    #git revert -n 901e614e8f3d8913e7f75ccd6cdbabbd0502c53f
 
     # HACK: proton: ntdll: Export a function to set a Unix environment variable
-    git revert -n bf6233be8f8b7c2e729daa91160dd41fbbb3c64e
+    #git revert -n bf6233be8f8b7c2e729daa91160dd41fbbb3c64e
 
     # HACK: steam: ntdll: Patch entry points with jumps.
-    git revert -n b25e4e6251675172321a561e1398874fd2dd0126
+    #git revert -n b25e4e6251675172321a561e1398874fd2dd0126
 
     # ntdll: Properly parse UDF instruction in ARM.
-    git revert -n f5a95366d46ad3067e0f0316cdb83b4ed344de3d
+    #git revert -n f5a95366d46ad3067e0f0316cdb83b4ed344de3d
 
     # ntdll: Implement __fastfail().
-    git revert -n b3cfa8ce5544f1a10b2a9034e993dcf944478501
+    #git revert -n b3cfa8ce5544f1a10b2a9034e993dcf944478501
 
     # HACK: steam: ntdll: Setup steamclient trampolines to lsteamclient.
-    git revert -n 6fa5dfc0bd079bd18e1f457b1e6ae0bcf7eb383d
+    #git revert -n 6fa5dfc0bd079bd18e1f457b1e6ae0bcf7eb383d
 
 
     patch -Rp1 < ../wineboot-Updating-prefix.patch
+    patch -Np1 < ../ntdll-Remove-trampolines-for-lsteamclient.patch
 
-    patch -Np1 < ../winevulkan-FSHack-AMD-FSRv1.patch
+    #patch -Np1 < ../winevulkan-FSHack-AMD-FSRv1.patch
 
     patch -Np1 < ../wine.inf-Remove-Steam-registry-entries.patch
     patch -Np1 < ../dxdiag-Ignore-64bit-option.patch
@@ -252,13 +258,17 @@ prepare() {
     dlls/winevulkan/make_vulkan
   popd
 
+  pushd dxvk
+    git submodule update --init --recursive
+  popd
+
   pushd vkd3d-proton
     git submodule update --init --recursive
+    patch -Np1 < ../vkd3d-Use-default-widl.patch
   popd
 
   pushd dxvk-nvapi
     git submodule update --init --recursive
-    patch -Np1 < ../dxvk-nvapi-Fix-missing-includes.patch
   popd
 
   # Doesn't compile without remove these flags as of 4.10
@@ -313,7 +323,7 @@ build() {
 
   msg2 "Building Wine-32..."
 
-  export PKG_CONFIG_PATH="/usr/lib32/pkgconfig"
+  export PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/share/pkgconfig"
   cd "$srcdir/$pkgbase-32-build"
   ../$pkgbase/configure \
     --prefix=/usr \
