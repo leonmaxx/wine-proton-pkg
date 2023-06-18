@@ -8,12 +8,12 @@
 pkgname=('wine-proton' 'wine-proton-nvapi')
 pkgbase=wine-proton
 pkgver=8.0
-pkgrel=1
+pkgrel=2
 
 _winever=$pkgver
 _pkgbasever=${pkgver/rc/-rc}
 
-_wine_commit=0913f492ebf4fefca70e6cab3b01f442c599732e
+_wine_commit=cd165953c8b379a78418711f07417022e503c81b
 _dxvk_commit=caf31033d711460e86781b16a4d9b0f41fa9e817
 _vkd3d_commit=08909d98565065994612e529feb0cad04e498a8e
 _nvapi_commit=80397ea5c3ed895d7094fe7e3c93f811650bb531
@@ -329,7 +329,6 @@ build() {
     --prefix=/usr \
     --with-x \
     --with-gstreamer \
-    --without-ldap \
     --libdir=/usr/lib32 \
     --with-wine64="$srcdir/$pkgbase-64-build" \
     --disable-tests
