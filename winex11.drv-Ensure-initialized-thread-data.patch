@@ -1,0 +1,12 @@
+diff -purN a/dlls/winex11.drv/window.c b/dlls/winex11.drv/window.c
+--- a/dlls/winex11.drv/window.c	2024-02-04 20:28:34.342055221 +0200
++++ b/dlls/winex11.drv/window.c	2024-02-04 20:35:21.831912283 +0200
+@@ -2787,7 +2787,7 @@ XIC X11DRV_get_ic( HWND hwnd )
+ 
+     if (data)
+     {
+-        x11drv_thread_data()->last_xic_hwnd = hwnd;
++        x11drv_init_thread_data()->last_xic_hwnd = hwnd;
+         ret = data->xic;
+         if (!ret && (xim = x11drv_thread_data()->xim)) ret = X11DRV_CreateIC( xim, data );
+         release_win_data( data );

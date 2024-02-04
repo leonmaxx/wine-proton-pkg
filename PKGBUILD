@@ -8,15 +8,15 @@
 pkgname=('wine-proton' 'wine-proton-nvapi')
 pkgbase=wine-proton
 pkgver=8.0
-pkgrel=2
+pkgrel=5
 
 _winever=$pkgver
 _pkgbasever=${pkgver/rc/-rc}
 
-_wine_commit=cd165953c8b379a78418711f07417022e503c81b
-_dxvk_commit=caf31033d711460e86781b16a4d9b0f41fa9e817
-_vkd3d_commit=08909d98565065994612e529feb0cad04e498a8e
-_nvapi_commit=80397ea5c3ed895d7094fe7e3c93f811650bb531
+_wine_commit=bb66944d9d7a0fc7692f05d4a2db418b468d3021
+_dxvk_commit=1b31aa5dbca0749d0737cff02043acb061332fb6
+_vkd3d_commit=0e681135f8bb3e43985574bb8c40bcecb17e7f7a
+_nvapi_commit=0a7c48b256cafe6b3fa1db8183f089712c72e9ad
 
 source=("$pkgbase::git+https://github.com/ValveSoftware/wine.git#commit=$_wine_commit"
         "dxvk::git+https://github.com/ValveSoftware/dxvk.git#commit=$_dxvk_commit"
@@ -27,10 +27,9 @@ source=("$pkgbase::git+https://github.com/ValveSoftware/wine.git#commit=$_wine_c
         wine.inf-Remove-Steam-registry-entries.patch
         ntdll-Remove-trampolines-for-lsteamclient.patch
         wineboot-Updating-prefix.patch
-        dxdiag-Ignore-64bit-option.patch
         dxvk-nvapi-Fix-missing-includes.patch
         winevulkan-FSHack-AMD-FSRv1.patch
-        vkd3d-Use-default-widl.patch
+        winex11.drv-Ensure-initialized-thread-data.patch
         widl-Ignore-option-pthread.patch
         wrc-Ignore-option-pthread.patch
         makefile-Proton-branding.patch)
@@ -40,13 +39,12 @@ sha512sums=('SKIP'
             'SKIP'
             '6e54ece7ec7022b3c9d94ad64bdf1017338da16c618966e8baf398e6f18f80f7b0576edf1d1da47ed77b96d577e4cbb2bb0156b0b11c183a0accf22654b0a2bb'
             'bdde7ae015d8a98ba55e84b86dc05aca1d4f8de85be7e4bd6187054bfe4ac83b5a20538945b63fb073caab78022141e9545685e4e3698c97ff173cf30859e285'
-            '31bdcf2c0db61f2bea1be52deeb939edc0dea615ac756560a329815dcb8cac1c1e2dcdd587b73f3bdc995bccd8b93f8179d55a1236414ffeb0e22eea413321ab'
-            '8accccce50e5bda488085c8d8eaefd10c0e2a2f1117eeb1c0191f9c30c245ff56d1a8d0bd2cfa65d885200be8608debcee92a6439e689d00a2a7b62699091f45'
+            '278ffa7f132ea5f85c8587ae1e18fc6b3a72509a0e24f24363b7ae530219f30bc05244a3a5756132841af175c8b89a0df6e099b50e85beba259e48a3c6746ed0'
+            '21b65121ce59f3c9bf90539dc243f1f91557fd76a851bbf189df344adbaa1b950c191a37540d787bdaa4a7c6be0db6f62f5546488cc4a4d542ba7854911be97b'
             '9ceab5380d1d11477aaa75107a3534fd554026d689c1d6bdc225bdf4aac24b72d030f7dcb95cf5c4701d58c721918a60e1c347255526f681f1475da85e74c7d9'
-            '6b62ffdee725d78b7c36aa83843bb767fcd85470d4ea3ce2059d399fcfed6e67db7217df3a9faeca3ee2c676c2857f313177ab8be679b108d20fc188e0551f95'
             '05826f7f3f29ce6da08d0c632a17e9268fee0ba484e85f0d41cdbaac9e2a6a09e23ebc29ffb3d1b6b3a8fe89db16013c8f161ad22121fb6ae07c82c9f681746c'
             '6f58bfcd9b43f61b70416ceb05a32e58fef0f36f166f86311be6673e54a32419b570bad58654c77a71be0ac5eaf999a8ccdee8e89087cb4c97de0e7c6078717c'
-            '72fa37279cc2feca630dbe2de55eba638c55bc2d6636c21254c8eb9155d3cfd371f11be6b1967bb5359214d7568c98f6387d29d55eccc674c7486e47f94fac47'
+            'f7006988ec4a6fb5caba861d751a0d50dfcec9fccfa436ecf3c093c4f73ef90dca6b9cdcc20082ee1c956eb0677a44499639a70f96d754723fd60b48a2ae0289'
             'd5db3b4ef07c41e740d0ca384e1d088748b7d090ae3cd96dfd8b3f6b5d55d9c7952de30d12a5a5c4680cbb995a7ff66dd6a0b7246a7f3021c4aa72a7ee9adde5'
             '996ef9b242787cfa0ca8aace46f35828246b5d6dfcaf8f0643454f7afe0db807364d74033d5d3ac562b8ad8e564c2aaae512161ed3bbcb01580b1b53d117aba5'
             'e3a14db8a13edfe7f26d7b44df4b095a2895792a37bb169a30463e1cc1315bd87009a0438a8ca14f7d53c339fa55d10368cf7a201a673fb533027ce265cbd6b3')
@@ -206,6 +204,7 @@ prepare() {
     git revert -n ba3c43eb34cd10b7cf1c8e76319a2eef86f31f8b
     git revert -n bf82f60052320c5c4396fa81a952fc243e03dd79
     git revert -n 9dbcb3b5f845e5f31093677804b0eada1bdc25b8
+    git revert -n 3f81a65a7c4920c037a8ea72f8fb443108224a53
     git revert -n 106fd7119b2d88dc4dece7b5058d73854a7aae2e
     #git revert -n 7b5266d81e153d0357122047386418d255d08650
 
@@ -246,10 +245,9 @@ prepare() {
     patch -Rp1 < ../wineboot-Updating-prefix.patch
     patch -Np1 < ../ntdll-Remove-trampolines-for-lsteamclient.patch
 
-    #patch -Np1 < ../winevulkan-FSHack-AMD-FSRv1.patch
+    patch -Np1 < ../winex11.drv-Ensure-initialized-thread-data.patch
 
     patch -Np1 < ../wine.inf-Remove-Steam-registry-entries.patch
-    patch -Np1 < ../dxdiag-Ignore-64bit-option.patch
     patch -Np1 < ../widl-Ignore-option-pthread.patch
     patch -Np1 < ../wrc-Ignore-option-pthread.patch
 
@@ -264,7 +262,6 @@ prepare() {
 
   pushd vkd3d-proton
     git submodule update --init --recursive
-    patch -Np1 < ../vkd3d-Use-default-widl.patch
   popd
 
   pushd dxvk-nvapi

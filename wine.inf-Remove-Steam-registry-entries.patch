@@ -1,15 +1,15 @@
 diff -purN a/loader/wine.inf.in b/loader/wine.inf.in
---- a/loader/wine.inf.in	2022-04-21 23:34:37.056647845 +0300
-+++ b/loader/wine.inf.in	2022-04-21 23:41:00.993405783 +0300
-@@ -334,7 +334,6 @@ HKCR,ftp\shell\open\command,,2,"""%11%\w
+--- a/loader/wine.inf.in	2024-02-04 16:36:01.584660275 +0200
++++ b/loader/wine.inf.in	2024-02-04 17:17:21.941076304 +0200
+@@ -335,7 +335,6 @@ HKCR,ftp\shell\open\command,,2,"""%11%\w
  HKCR,http\shell\open\command,,2,"""%11%\winebrowser.exe"" ""%1"""
  HKCR,https\shell\open\command,,2,"""%11%\winebrowser.exe"" ""%1"""
  HKCR,mailto\shell\open\command,,2,"""%11%\winebrowser.exe"" ""%1"""
 -HKCR,steam\shell\open\command,,,"""%16426%\Steam\Steam.exe"" -- ""%1"""
  
- HKCR,MIME\Database\Charset\_iso-2022-jp$ESC,"Codepage",0x10003,932
- HKCR,MIME\Database\Charset\_iso-2022-jp$ESC,"InternetEncoding",0x10003,50221
-@@ -5851,54 +5850,10 @@ InfFiles  = 17
+ [ContentIndex]
+ HKLM,System\CurrentControlSet\Control\ContentIndex\Language\Neutral,"WBreakerClass",,"{369647e0-17b0-11ce-9950-00aa004bbb1f}"
+@@ -2770,55 +2769,10 @@ InfFiles  = 17
  NlsFiles  = 11
  SortFiles = 10,globalization\sorting
  
@@ -57,6 +57,7 @@ diff -purN a/loader/wine.inf.in b/loader/wine.inf.in
 -HKCU,Software\Wine\DllOverrides,"atl140",0x2,"native,builtin"
 -HKCU,Software\Wine\DllOverrides,"concrt140",0x2,"native,builtin"
 -HKCU,Software\Wine\DllOverrides,"msvcp140",0x2,"native,builtin"
+-HKCU,Software\Wine\DllOverrides,"msvcp140_atomic_wait",0x2,"native,builtin"
 -HKCU,Software\Wine\DllOverrides,"msvcr140",0x2,"native,builtin"
 -HKCU,Software\Wine\DllOverrides,"ucrtbase",0x2,"native,builtin"
 -HKCU,Software\Wine\DllOverrides,"vcomp140",0x2,"native,builtin"
