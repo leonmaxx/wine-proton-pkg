@@ -7,19 +7,19 @@
 
 pkgname=('wine-proton' 'wine-proton-nvapi')
 pkgbase=wine-proton
-pkgver=8.0
-pkgrel=5
+pkgver=9.0
+pkgrel=4
 
 _winever=$pkgver
 _pkgbasever=${pkgver/rc/-rc}
 
-_wine_commit=bb66944d9d7a0fc7692f05d4a2db418b468d3021
-_dxvk_commit=1b31aa5dbca0749d0737cff02043acb061332fb6
-_vkd3d_commit=0e681135f8bb3e43985574bb8c40bcecb17e7f7a
-_nvapi_commit=0a7c48b256cafe6b3fa1db8183f089712c72e9ad
+_wine_commit=117daf8d508860a8552f59ebdd6ee16361431136
+_dxvk_commit=d96fa54080320e9b63227e76124ffa50a927ced2
+_vkd3d_commit=4fd7d3ab3d351de4ad50576b1a9df0a45a4a7c74
+_nvapi_commit=afb59a8e841b0ad561250327eb6a370b925c5f03
 
 source=("$pkgbase::git+https://github.com/ValveSoftware/wine.git#commit=$_wine_commit"
-        "dxvk::git+https://github.com/ValveSoftware/dxvk.git#commit=$_dxvk_commit"
+        "dxvk::git+https://github.com/doitsujin/dxvk.git#commit=$_dxvk_commit"
         "vkd3d-proton::git+https://github.com/HansKristian-Work/vkd3d-proton.git#commit=$_vkd3d_commit"
         "dxvk-nvapi::git+https://github.com/jp7677/dxvk-nvapi.git#commit=$_nvapi_commit"
         30-win32-aliases.conf
@@ -33,14 +33,14 @@ source=("$pkgbase::git+https://github.com/ValveSoftware/wine.git#commit=$_wine_c
         widl-Ignore-option-pthread.patch
         wrc-Ignore-option-pthread.patch
         makefile-Proton-branding.patch)
-sha512sums=('SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
+sha512sums=('806162115faf68360385969a965ee922eb05e1cc1aa9695a16cb62cf42e9363ef23f6f77230d92d1cccd5aea462b7a899d2410a635f157f9c1e782211747d24f'
+            'ae9ed7109c6d3fe132171219fad94ddf8ab0e17e6f4335cf5d854aa7dfedc688e5c386dfb8372614c3d311f49ae454413d7a0f4cdcacc1da2e77f020e9e7affe'
+            '0f19ee52d09df41d788307d4ba638059e231554bc94bfc418d55ae6fd5e32c80f4c6c4fc42e4c3027657ac7d9effc36954746b0ab1a9c0220eb58487a9f8f8f1'
+            'ca6f3c743bec50c94ac90653ad452891c8d4c34bd205ae5ea281c0f4a986cc379f21df80d631347a6c3c32b9b577afa03be781c4ec6e95a145c28ef493dfc67a'
             '6e54ece7ec7022b3c9d94ad64bdf1017338da16c618966e8baf398e6f18f80f7b0576edf1d1da47ed77b96d577e4cbb2bb0156b0b11c183a0accf22654b0a2bb'
             'bdde7ae015d8a98ba55e84b86dc05aca1d4f8de85be7e4bd6187054bfe4ac83b5a20538945b63fb073caab78022141e9545685e4e3698c97ff173cf30859e285'
-            '278ffa7f132ea5f85c8587ae1e18fc6b3a72509a0e24f24363b7ae530219f30bc05244a3a5756132841af175c8b89a0df6e099b50e85beba259e48a3c6746ed0'
-            '21b65121ce59f3c9bf90539dc243f1f91557fd76a851bbf189df344adbaa1b950c191a37540d787bdaa4a7c6be0db6f62f5546488cc4a4d542ba7854911be97b'
+            'b927e699cb933a1e00de140bd94e29765ff47da4e690f56b8d16c8f5927fa28b8dde3af8c89e081bf406ad50c30baa0fcc902b124c402ea60be4d627d9ff9c15'
+            'bbe919a92c181a567db6f705840bfa52526fa3f4df2245d97caa0dfe403c0b3d04865a2e5bf783d361873b8deb70b4854cf80dc7ee69c2e534a3213120a84a51'
             '9ceab5380d1d11477aaa75107a3534fd554026d689c1d6bdc225bdf4aac24b72d030f7dcb95cf5c4701d58c721918a60e1c347255526f681f1475da85e74c7d9'
             '05826f7f3f29ce6da08d0c632a17e9268fee0ba484e85f0d41cdbaac9e2a6a09e23ebc29ffb3d1b6b3a8fe89db16013c8f161ad22121fb6ae07c82c9f681746c'
             '6f58bfcd9b43f61b70416ceb05a32e58fef0f36f166f86311be6673e54a32419b570bad58654c77a71be0ac5eaf999a8ccdee8e89087cb4c97de0e7c6078717c'
@@ -170,7 +170,7 @@ prepare() {
 
 
     # dotnetfx35.exe: Add stub program.
-    git revert -n 3a98b9cc1dc8bdb17b8fb32b509d237c46d5dc35
+    git revert -n 5bfb96e0cbb1b75a94386d7239be6e5379e0057d
 
 
     # Instead of this revert block we'll revert by using patch
@@ -204,8 +204,9 @@ prepare() {
     git revert -n ba3c43eb34cd10b7cf1c8e76319a2eef86f31f8b
     git revert -n bf82f60052320c5c4396fa81a952fc243e03dd79
     git revert -n 9dbcb3b5f845e5f31093677804b0eada1bdc25b8
-    git revert -n 3f81a65a7c4920c037a8ea72f8fb443108224a53
-    git revert -n 106fd7119b2d88dc4dece7b5058d73854a7aae2e
+    git revert -n a7db676a16ba5006467bec9c774bb985cdba8e27
+    git revert -n aa91d771e84b737c95a7d23325040341bd1eeba7
+    git revert -n ab960656bc6882ea73d4b713466824957d6d4331
     #git revert -n 7b5266d81e153d0357122047386418d255d08650
 
 
@@ -245,7 +246,7 @@ prepare() {
     patch -Rp1 < ../wineboot-Updating-prefix.patch
     patch -Np1 < ../ntdll-Remove-trampolines-for-lsteamclient.patch
 
-    patch -Np1 < ../winex11.drv-Ensure-initialized-thread-data.patch
+    # patch -Np1 < ../winex11.drv-Ensure-initialized-thread-data.patch
 
     patch -Np1 < ../wine.inf-Remove-Steam-registry-entries.patch
     patch -Np1 < ../widl-Ignore-option-pthread.patch
@@ -253,6 +254,7 @@ prepare() {
 
     autoreconf
     tools/make_requests
+    tools/make_specfiles
     dlls/winevulkan/make_vulkan
   popd
 
@@ -384,7 +386,7 @@ package_wine-proton() {
 
   msg2 "Packaging DXVK-32..."
   cd "$srcdir/dxvk-32-build/bin"
-  for dll in d3d9 d3d10core d3d11 dxgi; do
+  for dll in d3d8 d3d9 d3d10core d3d11 dxgi; do
     rm -f "$pkgdir/usr/lib32/wine/i386-unix/$dll.dll.so"
     rm -f "$pkgdir/usr/lib32/wine/i386-windows/$dll.dll"
     $srcdir/$pkgbase-64-build/tools/winebuild/winebuild --builtin $dll.dll
@@ -393,10 +395,12 @@ package_wine-proton() {
 
   msg2 "Packaging VKD3D-32..."
   cd "$srcdir/vkd3d-32-build/bin"
-  rm -f "$pkgdir/usr/lib32/wine/i386-unix/d3d12.dll.so"
-  rm -f "$pkgdir/usr/lib32/wine/i386-windows/d3d12.dll"
-  $srcdir/$pkgbase-64-build/tools/winebuild/winebuild --builtin d3d12.dll
-  cp d3d12.dll "$pkgdir/usr/lib32/wine/i386-windows/d3d12.dll"
+  for dll in d3d12core d3d12; do
+    rm -f "$pkgdir/usr/lib32/wine/i386-unix/$dll.dll.so"
+    rm -f "$pkgdir/usr/lib32/wine/i386-windows/$dll.dll"
+    $srcdir/$pkgbase-64-build/tools/winebuild/winebuild --builtin $dll.dll
+    cp $dll.dll "$pkgdir/usr/lib32/wine/i386-windows/$dll.dll"
+  done
 
 
   msg2 "Packaging Wine-64..."
@@ -407,7 +411,7 @@ package_wine-proton() {
 
   msg2 "Packaging DXVK-64..."
   cd "$srcdir/dxvk-64-build/bin"
-  for dll in d3d9 d3d10core d3d11 dxgi; do
+  for dll in d3d8 d3d9 d3d10core d3d11 dxgi; do
     rm -f "$pkgdir/usr/lib/wine/x86_64-unix/$dll.dll.so"
     rm -f "$pkgdir/usr/lib/wine/x86_64-windows/$dll.dll"
     $srcdir/$pkgbase-64-build/tools/winebuild/winebuild --builtin $dll.dll
@@ -416,15 +420,19 @@ package_wine-proton() {
 
   msg2 "Packaging VKD3D-64..."
   cd "$srcdir/vkd3d-64-build/bin"
-  rm -f "$pkgdir/usr/lib/wine/x86_64-unix/d3d12.dll.so"
-  rm -f "$pkgdir/usr/lib/wine/x86_64-windows/d3d12.dll"
-  $srcdir/$pkgbase-64-build/tools/winebuild/winebuild --builtin d3d12.dll
-  cp d3d12.dll "$pkgdir/usr/lib/wine/x86_64-windows/d3d12.dll"
+  for dll in d3d12core d3d12; do
+    rm -f "$pkgdir/usr/lib/wine/x86_64-unix/$dll.dll.so"
+    rm -f "$pkgdir/usr/lib/wine/x86_64-windows/$dll.dll"
+    $srcdir/$pkgbase-64-build/tools/winebuild/winebuild --builtin $dll.dll
+    cp $dll.dll "$pkgdir/usr/lib/wine/x86_64-windows/$dll.dll"
+  done
 
   rm -f "$pkgdir/usr/lib32/wine/i386-unix/nvapi.dll.so"
   rm -f "$pkgdir/usr/lib32/wine/i386-windows/nvapi.dll"
   rm -f "$pkgdir/usr/lib/wine/x86_64-unix/nvapi64.dll.so"
   rm -f "$pkgdir/usr/lib/wine/x86_64-windows/nvapi64.dll"
+  rm -f "$pkgdir/usr/lib/wine/x86_64-unix/nvofapi64.dll.so"
+  rm -f "$pkgdir/usr/lib/wine/x86_64-windows/nvofapi64.dll"
 
   # Font aliasing settings for Win32 applications
   install -d "$pkgdir"/etc/fonts/conf.{avail,d}
@@ -455,6 +463,8 @@ package_wine-proton-nvapi() {
   cd "$srcdir/dxvk-nvapi-64-build/bin"
   $srcdir/$pkgbase-64-build/tools/winebuild/winebuild --builtin nvapi64.dll
   cp nvapi64.dll "$pkgdir/usr/lib/wine/x86_64-windows/nvapi64.dll"
+  $srcdir/$pkgbase-64-build/tools/winebuild/winebuild --builtin nvofapi64.dll
+  cp nvofapi64.dll "$pkgdir/usr/lib/wine/x86_64-windows/nvofapi64.dll"
 
   i686-w64-mingw32-strip --strip-unneeded "$pkgdir"/usr/lib32/wine/i386-windows/nvapi.dll
   x86_64-w64-mingw32-strip --strip-unneeded "$pkgdir"/usr/lib/wine/x86_64-windows/nvapi64.dll

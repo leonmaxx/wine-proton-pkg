@@ -1,7 +1,7 @@
 diff -purN a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
---- a/dlls/ntdll/loader.c	2023-04-26 20:47:38.778766817 +0300
-+++ b/dlls/ntdll/loader.c	2023-04-26 20:49:07.979283816 +0300
-@@ -2115,16 +2115,12 @@ static NTSTATUS build_module( LPCWSTR lo
+--- a/dlls/ntdll/loader.c	2024-12-19 13:08:33.367596445 +0200
++++ b/dlls/ntdll/loader.c	2024-12-19 13:12:33.799631567 +0200
+@@ -2350,17 +2350,12 @@ static NTSTATUS build_module( LPCWSTR lo
                                DWORD flags, BOOL system, WINE_MODREF **pwm )
  {
      static const char builtin_signature[] = "Wine builtin DLL";
@@ -15,20 +15,21 @@ diff -purN a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
      SIZE_T map_size;
 -    WCHAR *basename, *tmp;
 -    ULONG basename_len;
+-    BOOL is_steamclient32;
  
      if (!(nt = RtlImageNtHeader( *module ))) return STATUS_INVALID_IMAGE_FORMAT;
  
-@@ -2178,25 +2174,6 @@ static NTSTATUS build_module( LPCWSTR lo
-
-     set_security_cookie( *module, map_size );
-
+@@ -2381,50 +2376,6 @@ static NTSTATUS build_module( LPCWSTR lo
+ 
+     update_load_config( *module );
+ 
 -    basename = nt_name->Buffer;
 -    if ((tmp = wcsrchr(basename, '\\'))) basename = tmp + 1;
 -    if ((tmp = wcsrchr(basename, '/'))) basename = tmp + 1;
 -    basename_len = wcslen(basename);
 -    if (basename_len >= 4 && !wcscmp(basename + basename_len - 4, L".dll")) basename_len -= 4;
 -
--    if (use_lsteamclient() && (!RtlCompareUnicodeStrings(basename, basename_len, L"steamclient", 11, TRUE) ||
+-    if (use_lsteamclient() && ((is_steamclient32 = !RtlCompareUnicodeStrings(basename, basename_len, L"steamclient", 11, TRUE)) ||
 -         !RtlCompareUnicodeStrings(basename, basename_len, L"steamclient64", 13, TRUE) ||
 -         !RtlCompareUnicodeStrings(basename, basename_len, L"gameoverlayrenderer", 19, TRUE) ||
 -         !RtlCompareUnicodeStrings(basename, basename_len, L"gameoverlayrenderer64", 21, TRUE)) &&
@@ -36,20 +37,45 @@ diff -purN a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
 -        (lsteamclient || LdrLoadDll(load_path, 0, &lsteamclient_us, &lsteamclient) == STATUS_SUCCESS))
 -    {
 -        struct steamclient_setup_trampolines_params params = {.src_mod = *module, .tgt_mod = lsteamclient};
--        NTDLL_UNIX_CALL( steamclient_setup_trampolines, &params );
+-        WINE_UNIX_CALL( unix_steamclient_setup_trampolines, &params );
 -        wm->ldr.Flags |= LDR_DONT_RESOLVE_REFS;
 -        flags |= DONT_RESOLVE_DLL_REFERENCES;
+-        if (is_steamclient32)
+-        {
+-            OBJECT_ATTRIBUTES attr;
+-            void *addr = *module;
+-            SIZE_T size = 0x1000;
+-            LARGE_INTEGER offset;
+-            IO_STATUS_BLOCK io;
+-            DWORD protect_old;
+-            HANDLE file;
+-
+-            NtProtectVirtualMemory( NtCurrentProcess(), &addr, &size, PAGE_READWRITE, &protect_old );
+-            memset( &attr, 0, sizeof(attr) );
+-            attr.Length = sizeof(attr);
+-            attr.Attributes = OBJ_CASE_INSENSITIVE;
+-            attr.ObjectName = (UNICODE_STRING *)nt_name;
+-            NtOpenFile( &file, GENERIC_READ | SYNCHRONIZE, &attr, &io,
+-                        FILE_SHARE_READ | FILE_SHARE_DELETE,
+-                        FILE_SYNCHRONOUS_IO_NONALERT | FILE_NON_DIRECTORY_FILE );
+-            offset.QuadPart = (ULONG_PTR)&nt->OptionalHeader.ImageBase - (ULONG_PTR)addr;
+-            NtReadFile( file, 0, NULL, NULL, &io, &nt->OptionalHeader.ImageBase,
+-                        sizeof(nt->OptionalHeader.ImageBase), &offset, NULL );
+-            NtClose( file );
+-            TRACE( "steamclient ImageBase %#Ix.\n", nt->OptionalHeader.ImageBase );
+-            NtProtectVirtualMemory( NtCurrentProcess(), &addr, &size, protect_old, &protect_old );
+-        }
 -    }
 -
      /* fixup imports */
-
+ 
      if (!(flags & DONT_RESOLVE_DLL_REFERENCES) &&
 diff -purN a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
---- a/dlls/ntdll/unix/loader.c	2023-04-26 20:47:38.792099159 +0300
-+++ b/dlls/ntdll/unix/loader.c	2023-04-26 20:52:57.870434162 +0300
-@@ -2148,96 +2148,6 @@ static ULONG_PTR get_image_address(void)
+--- a/dlls/ntdll/unix/loader.c	2024-12-19 13:08:33.380929891 +0200
++++ b/dlls/ntdll/unix/loader.c	2024-12-19 13:10:22.511853751 +0200
+@@ -1047,96 +1047,6 @@ static NTSTATUS load_so_dll( void *args
+     return status;
  }
- 
  
 -static void *steamclient_srcs[128];
 -static void *steamclient_tgts[128];
@@ -144,18 +170,18 @@ diff -purN a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
  static BOOL debugstr_pc_impl( void *pc, char *buffer, unsigned int size )
  {
      unsigned int len;
-@@ -2297,7 +2207,6 @@ const unixlib_entry_t __wine_unix_call_f
-     load_so_dll,
-     unwind_builtin_dll,
+@@ -1198,7 +1108,6 @@ static const unixlib_entry_t unix_call_f
+     unixcall_wine_server_handle_to_fd,
+     unixcall_wine_spawnvp,
      system_time_precise,
 -    steamclient_setup_trampolines,
      is_pc_in_native_so,
      debugstr_pc,
  };
 diff -purN a/dlls/ntdll/unix/signal_i386.c b/dlls/ntdll/unix/signal_i386.c
---- a/dlls/ntdll/unix/signal_i386.c	2023-04-26 20:47:38.792099159 +0300
-+++ b/dlls/ntdll/unix/signal_i386.c	2023-04-26 20:49:11.892368317 +0300
-@@ -1881,7 +1881,6 @@ static void segv_handler( int signal, si
+--- a/dlls/ntdll/unix/signal_i386.c	2024-12-19 13:08:33.384263253 +0200
++++ b/dlls/ntdll/unix/signal_i386.c	2024-12-19 13:10:22.511853751 +0200
+@@ -1927,7 +1927,6 @@ static void segv_handler( int signal, si
      struct xcontext xcontext;
      ucontext_t *ucontext = sigcontext;
      void *stack = setup_exception_record( sigcontext, &rec, &xcontext );
@@ -163,7 +189,7 @@ diff -purN a/dlls/ntdll/unix/signal_i386.c b/dlls/ntdll/unix/signal_i386.c
  
      switch (TRAP_sig(ucontext))
      {
-@@ -1916,12 +1915,6 @@ static void segv_handler( int signal, si
+@@ -1962,12 +1961,6 @@ static void segv_handler( int signal, si
          }
          break;
      case TRAP_x86_PAGEFLT:  /* Page fault */
@@ -177,17 +203,18 @@ diff -purN a/dlls/ntdll/unix/signal_i386.c b/dlls/ntdll/unix/signal_i386.c
          rec.ExceptionInformation[0] = (ERROR_sig(ucontext) >> 1) & 0x09;
          rec.ExceptionInformation[1] = (ULONG_PTR)siginfo->si_addr;
 diff -purN a/dlls/ntdll/unix/signal_x86_64.c b/dlls/ntdll/unix/signal_x86_64.c
---- a/dlls/ntdll/unix/signal_x86_64.c	2023-04-26 20:47:38.792099159 +0300
-+++ b/dlls/ntdll/unix/signal_x86_64.c	2023-04-26 20:49:11.892368317 +0300
-@@ -2293,7 +2293,6 @@ static void segv_handler( int signal, si
+--- a/dlls/ntdll/unix/signal_x86_64.c	2024-12-19 13:08:33.384263253 +0200
++++ b/dlls/ntdll/unix/signal_x86_64.c	2024-12-19 13:14:49.050776005 +0200
+@@ -2315,7 +2315,7 @@ static void segv_handler( int signal, si
      EXCEPTION_RECORD rec = { 0 };
      struct xcontext context;
-     ucontext_t *ucontext = sigcontext;
+     ucontext_t *ucontext = init_handler( sigcontext );
 -    void *steamclient_addr = NULL;
++    void *dummy = NULL;
  
      rec.ExceptionAddress = (void *)RIP_sig(ucontext);
-     save_context( &context, sigcontext );
-@@ -2325,12 +2324,6 @@ static void segv_handler( int signal, si
+     save_context( &context, ucontext );
+@@ -2347,12 +2347,6 @@ static void segv_handler( int signal, si
          }
          break;
      case TRAP_x86_PAGEFLT:  /* Page fault */
@@ -201,22 +228,20 @@ diff -purN a/dlls/ntdll/unix/signal_x86_64.c b/dlls/ntdll/unix/signal_x86_64.c
          rec.ExceptionInformation[0] = (ERROR_sig(ucontext) >> 1) & 0x09;
          rec.ExceptionInformation[1] = (ULONG_PTR)siginfo->si_addr;
 diff -purN a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
---- a/dlls/ntdll/unix/unix_private.h	2023-04-26 20:47:38.792099159 +0300
-+++ b/dlls/ntdll/unix/unix_private.h	2023-04-26 20:49:11.892368317 +0300
-@@ -208,9 +208,6 @@ extern NTSTATUS system_time_precise( voi
+--- a/dlls/ntdll/unix/unix_private.h	2024-12-19 13:08:33.384263253 +0200
++++ b/dlls/ntdll/unix/unix_private.h	2024-12-19 13:15:57.661356482 +0200
+@@ -268,7 +268,6 @@ extern unsigned int alloc_object_attribu
+                                              data_size_t *ret_len );
+ extern NTSTATUS system_time_precise( void *args );
  
- extern void *anon_mmap_fixed( void *start, size_t size, int prot, int flags ) DECLSPEC_HIDDEN;
- extern void *anon_mmap_alloc( size_t size, int prot ) DECLSPEC_HIDDEN;
--
--extern void *steamclient_handle_fault( LPCVOID addr, DWORD err ) DECLSPEC_HIDDEN;
--
- extern void virtual_init(void) DECLSPEC_HIDDEN;
- extern ULONG_PTR get_system_affinity_mask(void) DECLSPEC_HIDDEN;
- extern void virtual_get_system_info( SYSTEM_BASIC_INFORMATION *info, BOOL wow64 ) DECLSPEC_HIDDEN;
+-extern void *steamclient_handle_fault( LPCVOID addr, DWORD err );
+ extern void *anon_mmap_fixed( void *start, size_t size, int prot, int flags );
+ extern void *anon_mmap_alloc( size_t size, int prot );
+ extern void virtual_init(void);
 diff -purN a/dlls/ntdll/unixlib.h b/dlls/ntdll/unixlib.h
---- a/dlls/ntdll/unixlib.h	2023-04-26 20:47:38.795432243 +0300
-+++ b/dlls/ntdll/unixlib.h	2023-04-26 20:50:11.818756452 +0300
-@@ -38,12 +38,6 @@ struct unwind_builtin_dll_params
+--- a/dlls/ntdll/unixlib.h	2024-12-19 13:08:33.384263253 +0200
++++ b/dlls/ntdll/unixlib.h	2024-12-19 13:10:22.515187112 +0200
+@@ -66,12 +66,6 @@ struct unwind_builtin_dll_params
      CONTEXT                    *context;
  };
  
@@ -229,9 +254,9 @@ diff -purN a/dlls/ntdll/unixlib.h b/dlls/ntdll/unixlib.h
  struct debugstr_pc_args
  {
      void *pc;
-@@ -56,7 +50,6 @@ enum ntdll_unix_funcs
-     unix_load_so_dll,
-     unix_unwind_builtin_dll,
+@@ -89,7 +83,6 @@ enum ntdll_unix_funcs
+     unix_wine_server_handle_to_fd,
+     unix_wine_spawnvp,
      unix_system_time_precise,
 -    unix_steamclient_setup_trampolines,
      unix_is_pc_in_native_so,
